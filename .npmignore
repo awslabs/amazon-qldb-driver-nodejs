@@ -1,0 +1,10 @@
+.coverage
+.eslintrc.json
+.nyc_output/*
+buildspec.yml
+coverage/*
+dev/*
+docs/*
+index.ts
+tsconfig.json
+src/*
