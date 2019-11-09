@@ -1,0 +1,67 @@
+{
+  "dependencies": {
+    "@types/node": "12.0.2",
+    "ion-hash-js": "^1.0.2",
+    "semaphore-async-await": "^1.5.1",
+    "stream": "0.0.2"
+  },
+  "name": "amazon-qldb-driver-nodejs",
+  "description": "The Node.js driver for working with Amazon Quantum Ledger Database",
+  "version": "0.1.0-preview.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@types/chai": "^4.2.3",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/mocha": "^5.2.7",
+    "@types/sinon": "^7.0.13",
+    "@typescript-eslint/eslint-plugin": "^2.5.0",
+    "@typescript-eslint/parser": "^2.5.0",
+    "aws-sdk": "^2.546.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^6.5.1",
+    "eslint-plugin-jsdoc": "^15.12.0",
+    "grunt": "^1.0.4",
+    "ion-js": "~3.1.2",
+    "mocha": "^6.2.0",
+    "nyc": "^14.1.1",
+    "sinon": "^7.3.2",
+    "ts-node": "^8.3.0",
+    "typedoc": "^0.15.0",
+    "typescript": "^3.5.3"
+  },
+  "peerDependencies": {
+    "aws-sdk": "^2.546.0",
+    "ion-js": "^3.1.2"
+  },
+  "scripts": {
+    "build": "npm run lint && tsc",
+    "doc": "typedoc --out docs ./src --exclude **/*.test.ts",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build",
+    "test": "set TS_NODE_COMPILER_OPTIONS={\"strict\":false} && mocha -r ts-node/register src/**/*.test.ts",
+    "testWithCoverage": "set TS_NODE_COMPILER_OPTIONS={\"strict\":false} && nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ts-node/register src/**/*.test.ts && nyc report"
+  },
+  "author": {
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com/"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "api",
+    "amazon",
+    "aws",
+    "qldb",
+    "ledger"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awslabs/amazon-qldb-driver-nodejs"
+  },
+  "nyc": {
+    "include": [
+      "src"
+    ]
+  }
+}
