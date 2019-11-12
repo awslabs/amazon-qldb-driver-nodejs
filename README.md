@@ -1,4 +1,4 @@
-# AmazonQLDB Node.js Driver
+# Amazon QLDB Node.js Driver
 
 This is the Node.js driver for Amazon Quantum Ledger Database (QLDB), which allows Node.js developers
 to write software that makes use of AmazonQLDB.
@@ -9,24 +9,7 @@ to write software that makes use of AmazonQLDB.
 
 ### Basic Configuration
 
-You need to set up your AWS security credentials and config before the driver is able to connect to AWS. 
-
-Set up credentials (in e.g. `~/.aws/credentials`):
-
-```
-[default]
-aws_access_key_id = <your access key id>
-aws_secret_access_key = <your secret key>
-```
-
-Set up a default region (in e.g. `~/.aws/config`):
-
-```
-[default]
-region = us-east-1 <or other region>
-```
-
-See [Accessing Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/accessing.html#SettingUp.Q.GetCredentials) page for more information.
+See [Accessing Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/accessing.html) for information on connecting to AWS.
 
 ### TypeScript 3.5.x
 
@@ -88,7 +71,7 @@ $ npm run testWithCoverage
 
 The performance tests have a separate README.md within the performance folder.
 
-### Documentation 
+### Documentation
 
 TypeDoc is used for documentation. You can generate HTML locally with the following:
 
@@ -99,3 +82,7 @@ TypeDoc is used for documentation. You can generate HTML locally with the follow
 ### Release 0.1.0-preview.1 (November 8, 2019)
 
 Preview release of the driver.
+
+## License
+
+This library is licensed under the Apache 2.0 License.
