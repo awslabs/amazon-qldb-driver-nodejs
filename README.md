@@ -11,6 +11,11 @@ to write software that makes use of AmazonQLDB.
 
 See [Accessing Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/accessing.html) for information on connecting to AWS.
 
+The JavaScript AWS SDK needs to have AWS_SDK_LOAD_CONFIG environment variable set to a truthy value in order to read
+from the ~./.aws/config file.
+
+See [Setting Region](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-region.html) page for more information.
+
 ### TypeScript 3.5.x
 
 The driver is written in, and requires, TypeScript 3.5.x. It will be automatically installed as a dependency. 
@@ -41,8 +46,8 @@ will be using the driver as a dependency.
 
 ```npm install ion-js```
 
-Then from within your package, you can call the use the driver. This example shows usage in TypeScript specifying the 
-ledger name:
+Then from within your package, you can now use the driver by importing it. This example shows usage in TypeScript 
+specifying the QLDB ledger name and a specific region:
 
 ```javascript
 import { PooledQldbDriver, QldbSession } from "amazon-qldb-driver-nodejs";
@@ -51,7 +56,7 @@ const testServiceConfigOptions = {
     region: "us-east-1"
 };
 
-const qldbDriver: PooledQldbDriver = new PooledQldbDriver(testServiceConfigOptions, "testLedger");
+const qldbDriver: PooledQldbDriver = new PooledQldbDriver("testLedger", testServiceConfigOptions));
 const qldbSession: QldbSession = await qldbDriver.getSession();
 
 for (const table of await qldbSession.getTableNames()) {
@@ -65,19 +70,25 @@ for (const table of await qldbSession.getTableNames()) {
 
 You can run the unit tests with this command:
 
-```
-$ npm run testWithCoverage
-```
+```npm test```
 
-The performance tests have a separate README.md within the performance folder.
+or
 
-### Documentation
+```npm run testWithCoverage```
+
+### Documentation 
 
 TypeDoc is used for documentation. You can generate HTML locally with the following:
 
 ```npm run doc```
 
 ## Release Notes
+
+### Release 0.1.0-preview.2 (November 12, 2019)
+
+* Fix a bug in the test command that caused unit tests to fail compilation.
+* Small clarifications to the README.
+* Addition of a valid `buildspec.yml` file for running unit tests via CodeBuild.
 
 ### Release 0.1.0-preview.1 (November 8, 2019)
 
