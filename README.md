@@ -23,17 +23,9 @@ Please see the link below for more detail on TypeScript 3.5.x:
 
 * [TypeScript 3.5.x](https://www.npmjs.com/package/typescript)
 
-## Installing the Driver
 
-To install the driver, run the following in the root directory of the project:
 
-```npm install```
-
-To build the driver, transpiling the TypeScript source code to JavaScript, run the following in the root directory:
-
-```npm run build```
-
-## Using the Driver as a Dependency
+## Getting Started
 
 To use the driver, in your package that wishes to use the driver, run the following:
 
@@ -64,7 +56,27 @@ for (const table of await qldbSession.getTableNames()) {
 }
 ```
 
+### See Also
+
+1. [Amazon QLDB Nodejs Driver Tutorial](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html): In this tutorial, you use the QLDB Driver for Node.js to create an Amazon QLDB ledger and populate it with tables and sample data.
+2. [Amazon QLDB Nodejs Driver Samples](https://github.com/aws-samples/amazon-qldb-dmv-sample-nodejs): A DMV based example application which demonstrates how to use QLDB with the QLDB Driver for Node.js.
+3. QLDB Nodejs driver accepts and returns [Amazon ION](http://amzn.github.io/ion-docs/) Documents. Amazon Ion is a richly-typed, self-describing, hierarchical data serialization format offering interchangeable binary and text representations. For more information read the [ION docs](http://amzn.github.io/ion-docs/docs.html).
+4. [Amazon ION Cookbook](http://amzn.github.io/ion-docs/guides/cookbook.html): This cookbook provides code samples for some simple Amazon Ion use cases.
+5. Amazon QLDB supports the [PartiQL](https://partiql.org/) query language. PartiQL provides SQL-compatible query access across multiple data stores containing structured data, semistructured data, and nested data. For more information read the [PartiQL docs](https://partiql.org/docs.html).
+6. Refer the section [Common Errors while using the Amazon QLDB Drivers](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-errors.html) which describes runtime errors that can be thrown by the Amazon QLDB Driver when calling the qldb-session APIs.
+
+
 ## Development
+
+### Setup
+
+To install the driver, run the following in the root directory of the project:
+
+```npm install```
+
+To build the driver, transpiling the TypeScript source code to JavaScript, run the following in the root directory:
+
+```npm run build```
 
 ### Running Tests
 
@@ -86,7 +98,8 @@ TypeDoc is used for documentation. You can generate HTML locally with the follow
 
 ### Release 0.1.1-preview.2 (December 26, 2019)
 
-* Fix "Digests don't match" bug #8
+
+* Fix "Digests don't match" bug [#8](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/8)
 * Renamed src/logUtil.ts to src/LogUtil.ts to match PascalCase.
 
 ### Release 0.1.0-preview.2 (November 12, 2019)
