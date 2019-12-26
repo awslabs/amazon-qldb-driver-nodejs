@@ -2,8 +2,7 @@
   "dependencies": {
     "@types/node": "12.0.2",
     "ion-hash-js": "^1.0.2",
-    "semaphore-async-await": "^1.5.1",
-    "stream": "0.0.2"
+    "semaphore-async-await": "^1.5.1"
   },
   "name": "amazon-qldb-driver-nodejs",
   "description": "The Node.js driver for working with Amazon Quantum Ledger Database",

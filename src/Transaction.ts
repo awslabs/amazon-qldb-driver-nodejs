@@ -18,7 +18,7 @@ import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
 import { ClientException, isOccConflictException, TransactionClosedError } from "./errors/Errors";
-import { warn } from "./logUtil";
+import { warn } from "./LogUtil";
 import { QldbHash } from "./QldbHash";
 import { QldbWriter } from "./QldbWriter";
 import { Result } from "./Result";

@@ -24,7 +24,7 @@ import {
     LambdaAbortedError,
     SessionClosedError
 } from "./errors/Errors";
-import { info, warn } from "./logUtil";
+import { info, warn } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
 import { QldbWriter } from "./QldbWriter";
 import { Result } from "./Result";

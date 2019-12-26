@@ -17,7 +17,7 @@ import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
 import { version } from "../package.json";
 import { Communicator } from "./Communicator";
 import { DriverClosedError } from "./errors/Errors";
-import { debug } from "./logUtil";
+import { debug } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
 import { QldbSessionImpl } from "./QldbSessionImpl";
 

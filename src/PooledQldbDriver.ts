@@ -16,7 +16,7 @@ import { globalAgent } from "http";
 import Semaphore from "semaphore-async-await";
 
 import { DriverClosedError, SessionPoolEmptyError } from "./errors/Errors";
-import { debug } from "./logUtil";
+import { debug } from "./LogUtil";
 import { PooledQldbSession } from "./PooledQldbSession";
 import { QldbDriver } from "./QldbDriver";
 import { QldbSession } from "./QldbSession";

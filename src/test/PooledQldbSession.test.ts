@@ -18,7 +18,7 @@ import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
 
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 import { SessionClosedError } from "../errors/Errors";
 import { PooledQldbSession } from "../PooledQldbSession";
 import { QldbSessionImpl } from "../QldbSessionImpl";
@@ -29,7 +29,7 @@ import { Transaction } from "../Transaction";
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
-const testLambda = () => logUtil.log("Test returning session to pool...");
+const testLambda = () => LogUtil.log("Test returning session to pool...");
 const testLedgerName: string = "fakeLedgerName";
 const testMessage: string = "foo";
 const testSessionToken: string = "sessionToken";
@@ -80,7 +80,7 @@ describe("PooledQldbSession", () => {
 
     describe("#close()", () => {
         it("should close pooledQldbSession and execute the lambda when called", () => {
-            const logSpy = sandbox.spy(logUtil, "log");
+            const logSpy = sandbox.spy(LogUtil, "log");
             pooledQldbSession.close();
             chai.assert.equal(pooledQldbSession["_isClosed"], true);
             sinon.assert.calledOnce(logSpy);
@@ -88,7 +88,7 @@ describe("PooledQldbSession", () => {
         });
 
         it("should be a no-op when already closed", () => {
-            const logSpy = sandbox.spy(logUtil, "log");
+            const logSpy = sandbox.spy(LogUtil, "log");
             pooledQldbSession["_isClosed"] = true;
             pooledQldbSession.close();
             sinon.assert.notCalled(logSpy);
