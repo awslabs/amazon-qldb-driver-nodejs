@@ -6,7 +6,7 @@
   },
   "name": "amazon-qldb-driver-nodejs",
   "description": "The Node.js driver for working with Amazon Quantum Ledger Database",
-  "version": "0.1.0-preview.2",
+  "version": "0.1.1-preview.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "devDependencies": {
