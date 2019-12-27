@@ -33,7 +33,7 @@ import {
     SessionPoolEmptyError,
     TransactionClosedError
 } from "../errors/Errors";
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -51,7 +51,7 @@ describe("Errors", () => {
 
     describe("#ClientException", () => {
         it("should be a ClientException when new ClientException created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new ClientException(testMessage);
             chai.expect(error).to.be.instanceOf(ClientException);
             chai.assert.equal(error.name, "ClientException");
@@ -62,7 +62,7 @@ describe("Errors", () => {
 
     describe("#DriverClosedError", () => {
         it("should be a DriverClosedError when new DriverClosedError created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new DriverClosedError();
             chai.expect(error).to.be.instanceOf(DriverClosedError);
             chai.assert.equal(error.name, "DriverClosedError");
@@ -72,7 +72,7 @@ describe("Errors", () => {
 
     describe("#LambdaAbortedError", () => {
         it("should be a LambdaAbortedError when new LambdaAbortedError created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new LambdaAbortedError();
             chai.expect(error).to.be.instanceOf(LambdaAbortedError);
             chai.assert.equal(error.name, "LambdaAbortedError");
@@ -82,7 +82,7 @@ describe("Errors", () => {
 
     describe("#SessionClosedError", () => {
         it("should be a SessionClosedError when new SessionClosedError created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new SessionClosedError();
             chai.expect(error).to.be.instanceOf(SessionClosedError);
             chai.assert.equal(error.name, "SessionClosedError");
@@ -92,7 +92,7 @@ describe("Errors", () => {
 
     describe("#SessionPoolEmptyError", () => {
         it("should be a SessionPoolEmptyError when new SessionPoolEmptyError created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new SessionPoolEmptyError(1);
             chai.expect(error).to.be.instanceOf(SessionPoolEmptyError);
             chai.assert.equal(error.name, "SessionPoolEmptyError");
@@ -102,7 +102,7 @@ describe("Errors", () => {
 
     describe("#TransactionClosedError", () => {
         it("should be a TransactionClosedError when new TransactionClosedError created", () => {
-            const logSpy = sandbox.spy(logUtil, "error");
+            const logSpy = sandbox.spy(LogUtil, "error");
             const error = new TransactionClosedError();
             chai.expect(error).to.be.instanceOf(TransactionClosedError);
             chai.assert.equal(error.name, "TransactionClosedError");

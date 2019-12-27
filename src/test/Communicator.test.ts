@@ -30,7 +30,7 @@ import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -249,7 +249,7 @@ describe("Communicator", () => {
                     throw new Error(testMessage);
                 }
             });
-            const logSpy = sandbox.spy(logUtil, "warn");
+            const logSpy = sandbox.spy(LogUtil, "warn");
             await communicator.endSession();
             const testRequest: SendCommandRequest = {
                 EndSession: {},

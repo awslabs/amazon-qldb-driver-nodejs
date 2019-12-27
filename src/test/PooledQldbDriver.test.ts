@@ -23,7 +23,7 @@ import Semaphore from "semaphore-async-await";
 import * as sinon from "sinon";
 
 import { DriverClosedError, SessionPoolEmptyError } from "../errors/Errors";
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 import { PooledQldbDriver } from "../PooledQldbDriver";
 import { QldbDriver } from "../QldbDriver";
 import { QldbSessionImpl } from "../QldbSessionImpl";
@@ -152,7 +152,7 @@ describe("PooledQldbDriver", () => {
             semaphoreStub.returns(Promise.resolve(true));
 
             const qldbDriverGetSessionSpy = sandbox.spy(QldbDriver.prototype, "getSession");
-            const logDebugSpy = sandbox.spy(logUtil, "debug");
+            const logDebugSpy = sandbox.spy(LogUtil, "debug");
 
             const pooledQldbSession: QldbSession = await pooledQldbDriver.getSession();
 
@@ -175,7 +175,7 @@ describe("PooledQldbDriver", () => {
             pooledQldbDriver["_sessionPool"] = [mockSession];
             pooledQldbDriver["_qldbClient"] = testQldbLowLevelClient;
 
-            const logDebugSpy = sandbox.spy(logUtil, "debug");
+            const logDebugSpy = sandbox.spy(LogUtil, "debug");
             const abortOrCloseSpy = sandbox.spy(mockSession as any, "_abortOrClose");
 
             const semaphoreStub = sandbox.stub(pooledQldbDriver["_semaphore"], "waitFor");
@@ -214,7 +214,7 @@ describe("PooledQldbDriver", () => {
 
     describe("#releaseSession()", () => {
         it("should return a session back to the session pool when called", () => {
-            const logDebugSpy = sandbox.spy(logUtil, "debug");
+            const logDebugSpy = sandbox.spy(LogUtil, "debug");
             const semaphoreReleaseSpy = sandbox.spy(pooledQldbDriver["_semaphore"], "release")
             const mockSession: QldbSessionImpl = <QldbSessionImpl><any> sandbox.mock(QldbSessionImpl);
 

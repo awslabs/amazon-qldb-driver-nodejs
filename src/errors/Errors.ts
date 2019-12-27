@@ -13,9 +13,9 @@
 
 import { AWSError } from "aws-sdk";
 
-import { error } from "../logUtil";
+import { error } from "../LogUtil";
 
-class ClientException extends Error {
+export class ClientException extends Error {
     constructor(message: string) {
         super(message);
         Object.setPrototypeOf(this, ClientException.prototype)
@@ -25,7 +25,7 @@ class ClientException extends Error {
     }
 }
 
-class DriverClosedError extends Error {
+export class DriverClosedError extends Error {
     constructor() {
         const message: string = "Cannot invoke methods on a closed driver. Please create a new driver and retry.";
         super(message);
@@ -36,7 +36,7 @@ class DriverClosedError extends Error {
     }
 }
 
-class LambdaAbortedError extends Error {
+export class LambdaAbortedError extends Error {
     constructor() {
         const message: string = "Abort called. Halting execution of lambda function.";
         super(message);
@@ -47,7 +47,7 @@ class LambdaAbortedError extends Error {
     }
 }
 
-class SessionClosedError extends Error {
+export class SessionClosedError extends Error {
     constructor() {
         const message: string = "Cannot invoke methods on a closed QldbSession. Please create a new session and retry.";
         super(message);
@@ -58,7 +58,7 @@ class SessionClosedError extends Error {
     }
 }
 
-class SessionPoolEmptyError extends Error {
+export class SessionPoolEmptyError extends Error {
     constructor(timeout: number) {
         const message: string =
             `Session pool is empty after waiting for ${timeout} milliseconds. Please close existing sessions first ` +
@@ -71,7 +71,7 @@ class SessionPoolEmptyError extends Error {
     }
 }
 
-class TransactionClosedError extends Error {
+export class TransactionClosedError extends Error {
     constructor() {
         const message: string =
             "Cannot invoke methods on a closed Transaction. Please create a new transaction and retry.";
@@ -88,7 +88,7 @@ class TransactionClosedError extends Error {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidParameterException. False otherwise.
  */
-function isInvalidParameterException(e: AWSError): boolean {
+export function isInvalidParameterException(e: AWSError): boolean {
     return e.code === "InvalidParameterException";
 }
 
@@ -97,7 +97,7 @@ function isInvalidParameterException(e: AWSError): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidSessionException. False otherwise.
  */
-function isInvalidSessionException(e: AWSError): boolean {
+export function isInvalidSessionException(e: AWSError): boolean {
     return e.code === "InvalidSessionException";
 }
 
@@ -106,7 +106,7 @@ function isInvalidSessionException(e: AWSError): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an OccConflictException. False otherwise.
  */
-function isOccConflictException(e: AWSError): boolean {
+export function isOccConflictException(e: AWSError): boolean {
     return e.code === "OccConflictException";
 }
 
@@ -115,7 +115,7 @@ function isOccConflictException(e: AWSError): boolean {
  * @param e The client error to check to see if it is a ResourceNotFoundException.
  * @returns Whether or not the exception is a ResourceNotFoundException.
  */
-function isResourceNotFoundException(e: AWSError): boolean {
+export function isResourceNotFoundException(e: AWSError): boolean {
     return e.code === "ResourceNotFoundException";
 }
 
@@ -124,7 +124,7 @@ function isResourceNotFoundException(e: AWSError): boolean {
  * @param e The client error to check to see if it is a ResourcePreconditionNotMetException.
  * @returns Whether or not the exception is a ResourcePreconditionNotMetException.
  */
-function isResourcePreconditionNotMetException(e: AWSError): boolean {
+export function isResourcePreconditionNotMetException(e: AWSError): boolean {
     return e.code === "ResourcePreconditionNotMetException";
 }
 
@@ -133,24 +133,9 @@ function isResourcePreconditionNotMetException(e: AWSError): boolean {
  * @param e The client error caught.
  * @returns True if the exception is a retriable exception. False otherwise.
  */
-function isRetriableException(e: AWSError): boolean {
+export function isRetriableException(e: AWSError): boolean {
     return (e.statusCode === 500) ||
            (e.statusCode === 503) ||
            (e.code === "NoHttpResponseException") ||
            (e.code === "SocketTimeoutException");
 }
-
-export {
-    ClientException,
-    DriverClosedError,
-    isInvalidParameterException,
-    isInvalidSessionException,
-    isOccConflictException,
-    isResourceNotFoundException,
-    isResourcePreconditionNotMetException,
-    isRetriableException,
-    LambdaAbortedError,
-    SessionClosedError,
-    SessionPoolEmptyError,
-    TransactionClosedError
-};

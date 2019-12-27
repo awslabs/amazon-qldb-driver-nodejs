@@ -30,7 +30,7 @@ import { Readable } from "stream";
 
 import { Communicator } from "../Communicator";
 import * as Errors from "../errors/Errors";
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 import { QldbHash } from "../QldbHash";
 import { createQldbWriter, QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
@@ -42,6 +42,7 @@ const sandbox = sinon.createSandbox();
 
 const testMessage: string = "foo";
 const testStatement: string = "SELECT * FROM foo";
+const testStatementWithQuotes: string = `SELECT * FROM "foo"`;
 const testPageToken: PageToken = "foo";
 const testTransactionId: string = "txnId";
 const testHash: Uint8Array = new Uint8Array([1, 2, 3]);
@@ -195,7 +196,7 @@ describe("Transaction", () => {
                 throw new Error("foo2");
             };
             const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            const logSpy = sandbox.spy(logUtil, "warn");
+            const logSpy = sandbox.spy(LogUtil, "warn");
             isOccStub.returns(false);
             const commitSpy = sandbox.spy(mockCommunicator, "commit");
             const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
@@ -333,7 +334,7 @@ describe("Transaction", () => {
     });
 
     describe("#_sendExecute()", () => {
-        it("should return a rejected promise when called after commmit() called", async () => {
+        it("should return a rejected promise when called after commit() called", async () => {
             await transaction.commit();
             await chai.expect(transaction["_sendExecute"](testStatement, [])).to.be.rejected;
         });
@@ -367,6 +368,64 @@ describe("Transaction", () => {
             chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
             chai.assert.equal(testExecuteStatementResult, result);
 
+        });
+
+        it("should compute hashes correctly when called from a statement that contain quotes", async () => {
+            const qldbWriter1: QldbWriter = createQldbWriter();
+            const qldbWriter2: QldbWriter = createQldbWriter();
+
+            const parameters: QldbWriter[] = [qldbWriter1, qldbWriter2];
+
+            let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatementWithQuotes);
+            parameters.forEach((writer: QldbWriter) => {
+                testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(writer.getBytes()));
+            });
+            const updatedHash: Uint8Array = transaction["_txnHash"].dot(testStatementHash).getQldbHash();
+
+            const toQldbHashSpy = sandbox.spy(QldbHash, "toQldbHash");
+
+            const result: ExecuteStatementResult = await transaction["_sendExecute"](
+                testStatementWithQuotes,
+                parameters
+            );
+
+            sinon.assert.calledThrice(toQldbHashSpy);
+            sinon.assert.calledWith(toQldbHashSpy, testStatementWithQuotes);
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriter1.getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriter2.getBytes());
+
+            chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
+            chai.assert.equal(testExecuteStatementResult, result);
+
+        });
+
+        it("should compute different hashes when called from different statements that contain quotes", async () => {
+            const firstStatement: string = `INSERT INTO "first_table" VALUE {'test': 'hello world'}`;
+            const secondStatement: string = `INSERT INTO "second_table" VALUE {'test': 'hello world'}`;
+
+            const firstStatementHash: QldbHash = QldbHash.toQldbHash(firstStatement);
+            const secondStatementHash: QldbHash = QldbHash.toQldbHash(secondStatement);
+
+            // If the different statements that contain quotes are hashed incorrectly, then the hash of
+            // 92Hs4IGd3Gnq4O9sVQX/S0AanTKWolpiAXzv+9GLzP0= would be produced every time.
+            // It's asserted here that the hashes are different and computed correctly.
+            chai.assert.notEqual(
+                ionJs.toBase64(firstStatementHash.getQldbHash()),
+                ionJs.toBase64(secondStatementHash.getQldbHash())
+            );
+        });
+
+        it("should have different hashes when called from same statements, one with quotes one without", async () => {
+            const firstStatement: string = `INSERT INTO "first_table" VALUE {'test': 'hello world'}`;
+            const secondStatement: string = `INSERT INTO first_table VALUE {'test': 'hello world'}`;
+
+            const firstStatementHash: QldbHash = QldbHash.toQldbHash(firstStatement);
+            const secondStatementHash: QldbHash = QldbHash.toQldbHash(secondStatement);
+
+            chai.assert.notEqual(
+                ionJs.toBase64(firstStatementHash.getQldbHash()),
+                ionJs.toBase64(secondStatementHash.getQldbHash())
+            );
         });
 
         it("should convert QldbWriters to ValueHolders correctly when called", async () => {

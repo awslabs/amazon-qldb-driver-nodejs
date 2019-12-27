@@ -84,6 +84,11 @@ TypeDoc is used for documentation. You can generate HTML locally with the follow
 
 ## Release Notes
 
+### Release 0.1.1-preview.2 (December 26, 2019)
+
+* Fix "Digests don't match" bug #8
+* Renamed src/logUtil.ts to src/LogUtil.ts to match PascalCase.
+
 ### Release 0.1.0-preview.2 (November 12, 2019)
 
 * Fix a bug in the test command that caused unit tests to fail compilation.

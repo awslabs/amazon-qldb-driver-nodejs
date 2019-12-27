@@ -26,7 +26,7 @@ import {
 } from "aws-sdk/clients/qldbsession";
 import { inspect } from "util";
 
-import { debug, warn } from "./logUtil";
+import { debug, warn } from "./LogUtil";
 
 /**
  * A class representing an independent session to a QLDB ledger that handles endpoint requests. This class is used in

@@ -13,7 +13,7 @@
 
 import { createHash } from "crypto";
 import { cryptoHasherProvider, HashReader, makeHashReader } from "ion-hash-js";
-import { makeReader } from "ion-js";
+import { makeReader, makeTextWriter, Writer } from "ion-js";
 
 const HASH_SIZE: number = 32
 
@@ -72,7 +72,10 @@ export class QldbHash {
      */
     static toQldbHash(value: any): QldbHash {
         if (typeof value === "string") {
-            value = "\"" + value + "\"";
+            const writer: Writer = makeTextWriter();
+            writer.writeString(value);
+            writer.close();
+            value = writer.getBytes();
         }
         const hashReader: HashReader = makeHashReader(makeReader(value), cryptoHasherProvider("sha256"));
         hashReader.next();

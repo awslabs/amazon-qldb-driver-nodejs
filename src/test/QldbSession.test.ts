@@ -33,7 +33,7 @@ import { format } from "util";
 
 import { Communicator } from "../Communicator";
 import * as Errors from "../errors/Errors";
-import * as logUtil from "../logUtil";
+import * as LogUtil from "../LogUtil";
 import { QldbSessionImpl } from "../QldbSessionImpl";
 import { createQldbWriter, QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
@@ -215,7 +215,7 @@ describe("QldbSession", () => {
 
             const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
             const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            const logSpy = sandbox.spy(logUtil, "warn");
+            const logSpy = sandbox.spy(LogUtil, "warn");
 
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw new Error(testMessage);
@@ -232,7 +232,7 @@ describe("QldbSession", () => {
 
             const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
             const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            const logSpy = sandbox.spy(logUtil, "warn");
+            const logSpy = sandbox.spy(LogUtil, "warn");
 
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw new Error(testMessage);
@@ -247,8 +247,8 @@ describe("QldbSession", () => {
             const isInvalidSessionStub = sandbox.stub(Errors, "isInvalidSessionException");
             isInvalidSessionStub.returns(true);
 
-            const logWarnSpy = sandbox.spy(logUtil, "warn");
-            const logInfoSpy = sandbox.spy(logUtil, "info");
+            const logWarnSpy = sandbox.spy(LogUtil, "warn");
+            const logInfoSpy = sandbox.spy(LogUtil, "info");
 
             Communicator.create = async () => {
                 return mockCommunicator;
@@ -268,12 +268,12 @@ describe("QldbSession", () => {
             const isRetriableStub = sandbox.stub(Errors, "isRetriableException");
             isRetriableStub.returns(true);
             const retryIndicator = () =>
-                logUtil.log("Retrying test retry indicator...");
+                LogUtil.log("Retrying test retry indicator...");
 
             const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
             const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            const logSpy = sandbox.spy(logUtil, "warn");
-            const retryIndicatorSpy = sandbox.spy(logUtil, "log");
+            const logSpy = sandbox.spy(LogUtil, "warn");
+            const retryIndicatorSpy = sandbox.spy(LogUtil, "log");
 
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw new Error(testMessage);
@@ -418,7 +418,7 @@ describe("QldbSession", () => {
             mockTransaction.abort = async () => {
                 throw new Error(testMessage);
             };
-            const logSpy = sandbox.spy(logUtil, "warn");
+            const logSpy = sandbox.spy(LogUtil, "warn");
             const communicatorAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
             const transactionAbortSpy = sandbox.spy(mockTransaction, "abort");
             await qldbSession["_noThrowAbort"](mockTransaction);
