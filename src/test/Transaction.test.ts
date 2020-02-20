@@ -86,7 +86,6 @@ describe("Transaction", () => {
             chai.assert.equal(transaction["_communicator"], mockCommunicator);
             chai.assert.equal(transaction["_txnId"], testTransactionId);
             chai.assert.equal(transaction["_isClosed"], false);
-            chai.assert.equal(transaction["_resultStreams"].length, 0);
             chai.assert.deepEqual(transaction["_txnHash"], QldbHash.toQldbHash(testTransactionId));
             chai.expect(transaction["_hashLock"]).to.be.an.instanceOf(Lock);
         });
@@ -313,23 +312,9 @@ describe("Transaction", () => {
     });
 
     describe("#_internalClose()", () => {
-        it("should close transaction and pop and close all Streams in _resultStreams list", async () => {
-            const sampleResultStreamObject: ResultStream = new ResultStream(
-                testTransactionId,
-                pageToken,
-                mockCommunicator
-            );
-            const sampleResultStreamObject2: ResultStream = new ResultStream(
-                testTransactionId,
-                pageToken,
-                mockCommunicator
-            );
-            transaction["_resultStreams"] = [sampleResultStreamObject, sampleResultStreamObject2];
+        it("should close transaction", async () => {
             transaction["_internalClose"]();
             chai.expect(transaction["_isClosed"]).to.be.true;
-            chai.assert.equal(transaction["_resultStreams"].length, 0);
-            chai.assert.equal(sampleResultStreamObject["_isClosed"], true);
-            chai.assert.equal(sampleResultStreamObject2["_isClosed"], true);
         });
     });
 

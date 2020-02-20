@@ -41,14 +41,11 @@ import { ResultStream } from "./ResultStream";
  *
  * When an OCC conflict occurs, the transaction is closed and must be handled manually by creating a new transaction
  * and re-executing the desired queries.
- *
- * Child {@linkcode ResultStream} objects will be closed when this transaction is aborted or committed.
  */
 export class Transaction {
     private _communicator: Communicator;
     private _txnId: string;
     private _isClosed: boolean;
-    private _resultStreams: ResultStream[];
     private _txnHash: QldbHash;
     private _hashLock: Lock;
 
@@ -61,7 +58,6 @@ export class Transaction {
         this._communicator = communicator;
         this._txnId = txnId;
         this._isClosed = false;
-        this._resultStreams = [];
         this._txnHash = QldbHash.toQldbHash(txnId);
         this._hashLock = new Lock();
     }
@@ -137,9 +133,7 @@ export class Transaction {
      */
     async executeStream(statement: string, parameters: QldbWriter[] = []): Promise<Readable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        const resultStream = new ResultStream(this._txnId, result.FirstPage, this._communicator);
-        this._resultStreams.push(resultStream);
-        return resultStream;
+        return new ResultStream(this._txnId, result.FirstPage, this._communicator);
     }
 
     /**
@@ -151,13 +145,10 @@ export class Transaction {
     }
 
     /**
-     * Mark the transaction as closed, and stop streaming for any ResultStream objects.
+     * Mark the transaction as closed.
      */
     private _internalClose(): void {
         this._isClosed = true;
-        while (this._resultStreams.length !== 0) {
-            this._resultStreams.pop().close();
-        }
     }
 
     /**
