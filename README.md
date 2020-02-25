@@ -96,6 +96,12 @@ TypeDoc is used for documentation. You can generate HTML locally with the follow
 
 ## Release Notes
 
+### Release 0.1.2-preview.1
+
+* Fix : "Error: stream.push() after EOF" bug [#7](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/7)
+* Fix : On reading from ResultStream, potential event listeners might not have received an error. Error fixed by rightly calling the destroy method and passing the error to it.
+* Fix : On starting a transaction, on consuming the resultstream, the last value could sometimes show up twice.
+
 ### Release 0.1.1-preview.2 (December 26, 2019)
 
 
