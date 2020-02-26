@@ -75,7 +75,7 @@ export interface QldbSession {
      * @throws {@linkcode SessionClosedError} when the session is closed.
      */
     executeStatement: (statement: string,
-                       parameters: QldbWriter[],
+                       parameters?: QldbWriter[],
                        retryIndicator?: (retryAttempt: number) => void) => Promise<Result>;
 
     /**
