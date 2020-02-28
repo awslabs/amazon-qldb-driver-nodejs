@@ -13,11 +13,9 @@
 
 import { FetchPageResult, Page } from "aws-sdk/clients/qldbsession";
 import { makeReader, Reader } from "ion-js";
-import { Lock } from "semaphore-async-await"
 import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
-import { ClientException } from "./errors/Errors";
 import { Result } from "./Result";
 
 /**
@@ -30,9 +28,8 @@ export class ResultStream extends Readable {
     private _cachedPage: Page;
     private _txnId: string;
     private _shouldPushCachedPage: boolean;
-    private _lastRetrievedIndex: number;
-    private _isClosed: boolean;
-    private _lock: Lock;
+    private _retrieveIndex: number;
+    private _isPushingData: boolean;
 
     /**
      * Create a ResultStream.
@@ -46,28 +43,20 @@ export class ResultStream extends Readable {
         this._cachedPage = firstPage;
         this._txnId = txnId;
         this._shouldPushCachedPage = true;
-        this._lastRetrievedIndex = 0;
-        this._isClosed = false;
-        this._lock = new Lock();
-    }
-
-    /**
-     * Close this ResultStream.
-     */
-    close(): void {
-        this._isClosed = true;
+        this._retrieveIndex = 0;
+        this._isPushingData = false;
     }
 
     /**
      * Implementation of the `readable.read` method for the Node Streams Readable Interface.
      * @param size The number of bytes to read asynchronously. This is currently not being used as only object mode is
      * supported.
-     * @throws {@linkcode ClientException} when this ResultStream is closed.
      */
     _read(size?: number): void {
-        if (this._isClosed) {
-            throw new ClientException("Result stream is closed. Cannot stream data.");
+        if (this._isPushingData) {
+            return;
         }
+        this._isPushingData = true;
         this._pushPageValues();
     }
 
@@ -77,30 +66,44 @@ export class ResultStream extends Readable {
      * @returns Promise which fulfills with void.
      */
     private async _pushPageValues(): Promise<void> {
-        await this._lock.acquire();
+        let canPush: boolean = true;
         try {
             if (this._shouldPushCachedPage) {
                 this._shouldPushCachedPage = false;
             } else if (this._cachedPage.NextPageToken) {
-                const fetchPageResult: FetchPageResult = 
-                    await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
-                this._cachedPage = fetchPageResult.Page;
-                this._lastRetrievedIndex = 0;
-            }
-            for (let i: number = this._lastRetrievedIndex; i < this._cachedPage.Values.length; i++) {
-                const reader: Reader = makeReader(Result._handleBlob(this._cachedPage.Values[i].IonBinary));
-                if (!this.push(reader)) {
-                    this._lastRetrievedIndex = i;
-                    this._shouldPushCachedPage = this._lastRetrievedIndex < this._cachedPage.Values.length;
+                try {
+                    const fetchPageResult: FetchPageResult = 
+                        await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
+                    this._cachedPage = fetchPageResult.Page;
+                    this._retrieveIndex = 0;
+                } catch (e) {
+                    this.destroy(e);
+                    canPush = false;
                     return;
                 }
             }
+
+            while (this._retrieveIndex < this._cachedPage.Values.length) {
+                const reader: Reader = 
+                    makeReader(Result._handleBlob(this._cachedPage.Values[this._retrieveIndex++].IonBinary));
+                canPush = this.push(reader);
+                if (!canPush) {
+                    this._shouldPushCachedPage = this._retrieveIndex < this._cachedPage.Values.length;
+                    return;
+                }
+            }
+
             if (!this._cachedPage.NextPageToken) {
                 this.push(null);
-                this._isClosed = true;
+                canPush = false;
             }
+
         } finally {
-            this._lock.release();
+            this._isPushingData = false;
+
+            if (canPush) {
+                this._read();
+            }
         }
     }
 }
