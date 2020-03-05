@@ -13,7 +13,7 @@
     "node": ">=0.8.10"
   },
   "devDependencies": {
-    "@types/chai": "^4.2.3",
+    "@types/chai": "4.2.10",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^5.2.7",
     "@types/sinon": "^7.0.13",
