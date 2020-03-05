@@ -91,28 +91,28 @@ describe("PooledQldbDriver", () => {
         });
 
         it("should throw a RangeError when timeOutMillis less than zero passed in", () => {
-            const constructorFunction: Function = () => {
+            const constructorFunction: () => void = () => {
                 new PooledQldbDriver(testLedgerName, testLowLevelClientOptions, 4, 0, -1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
 
         it("should throw a RangeError when retryLimit less than zero passed in", () => {
-            const constructorFunction: Function = () => {
+            const constructorFunction: () => void = () => {
                 new PooledQldbDriver(testLedgerName, testLowLevelClientOptions, -1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
 
         it("should throw a RangeError when poolLimit greater than maxSockets", () => {
-            const constructorFunction: Function = () => {
+            const constructorFunction: () => void  = () => {
                 new PooledQldbDriver(testLedgerName, testLowLevelClientOptions, 4, testMaxSockets + 1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
 
         it("should throw a RangeError when poolLimit less than zero", () => {
-            const constructorFunction: Function = () => {
+            const constructorFunction: () => void = () => {
                 new PooledQldbDriver(testLedgerName, testLowLevelClientOptions, 4, -1);
             };
             chai.assert.throws(constructorFunction, RangeError);
