@@ -17,7 +17,7 @@ import "mocha";
 import { IonBinary, Page, ValueHolder} from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { makeReader, Reader} from "ion-js";
+import { dom, IonType, IonTypes} from "ion-js";
 import * as sinon from "sinon";
 import { Readable } from "stream";
 
@@ -77,7 +77,7 @@ describe("Result", () => {
     });
 
     describe("#getResultList()", () => {
-        it("should return a list of Readers when called", async () => {
+        it("should return a list of Ion values when called", async () => {
             const value1: ValueHolder = {IonBinary: "a"};
             const value2: ValueHolder = {IonBinary: "b"};
             const value3: ValueHolder = {IonBinary: "c"};
@@ -91,18 +91,99 @@ describe("Result", () => {
                 };
             };
             const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
-            const resultList: Reader[] = result.getResultList();
+            const resultList: dom.Value[] = result.getResultList();
 
-            chai.assert.equal(allValues.length, resultList.length);
             resultList.forEach((result, i) => {
                 chai.assert.equal(
-                    JSON.stringify(result),
-                    JSON.stringify(makeReader(Result._handleBlob(allValues[i].IonBinary)))
+                    result,
+                    allValues[i].IonBinary
                 );
             });
         });
 
-        it("should return a list of Readers that include the initial Page when called", async () => {
+        it("should return a list of Ion values with correct Ion types when called", async () => {
+            const expectedTypes: IonType[] = [
+                IonTypes.NULL,
+                IonTypes.BOOL,
+                IonTypes.INT,
+                IonTypes.FLOAT,
+                IonTypes.DECIMAL,
+                IonTypes.TIMESTAMP,
+                IonTypes.SYMBOL,
+                IonTypes.STRING,
+                IonTypes.CLOB,
+                IonTypes.BLOB,
+                IonTypes.SEXP,
+                IonTypes.LIST,
+                IonTypes.STRUCT
+            ]
+            const nullValue: ValueHolder = {IonBinary: "null"};
+            const bool: ValueHolder = {IonBinary: "true"};
+            const int: ValueHolder = {IonBinary: "5"};
+            const float: ValueHolder = {IonBinary: "5e3"};
+            const decimal: ValueHolder = {IonBinary: "5.5"};
+            const time: ValueHolder = {IonBinary: "2017-01-01"};
+            const symbol: ValueHolder = {IonBinary: "Symbol"};
+            const string: ValueHolder = {IonBinary: "\"String\""};
+            const clob: ValueHolder = {IonBinary: "{{ \"clob\" }}"};
+            const blob: ValueHolder = {IonBinary: "{{ blob }}"};
+            const sexp: ValueHolder = {IonBinary: "(1 2 3)"};
+            const list: ValueHolder = {IonBinary: "[1, 2, 3]"};
+            const struct: ValueHolder = {IonBinary: "{key: val}"};
+            const allValues: ValueHolder[] = [
+                nullValue,
+                bool,
+                int,
+                float,
+                decimal,
+                time,
+                symbol,
+                string,
+                clob,
+                blob,
+                sexp,
+                list,
+                struct
+            ];
+            const finalTestPage: Page = {Values: allValues};
+
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: finalTestPage
+                };
+            };
+            const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
+            const resultList: dom.Value[] = result.getResultList();
+
+            resultList.forEach((result, i) => {
+                chai.assert.equal(
+                    result.getType(),
+                    expectedTypes[i]
+                );
+            });
+        });
+
+        it("should return a list of Ion values for nested ion containers with correct Ion types", async () => {
+            const allValues: ValueHolder[] = [{IonBinary: "{key: ([1, 2] {innerStruct: [3]} 4)}"}];
+            const finalTestPage: Page = {Values: allValues};
+
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: finalTestPage
+                };
+            };
+            const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
+            const value: dom.Value = result.getResultList()[0];
+
+            chai.assert.equal(value.getType(), IonTypes.STRUCT);
+            chai.assert.equal(value.get("key").getType(), IonTypes.SEXP);
+            chai.assert.equal(value.get("key").get(0).getType(), IonTypes.LIST);
+            chai.assert.equal(value.get("key").get(1).getType(), IonTypes.STRUCT);
+            chai.assert.equal(value.get("key").get(1).get("innerStruct").getType(), IonTypes.LIST);
+            chai.assert.equal(value.get("key").get(2).getType(), IonTypes.INT);
+        });
+
+        it("should return a list of Ion values that include the initial Page when called", async () => {
             const value1: ValueHolder = {IonBinary: "a"};
             const value2: ValueHolder = {IonBinary: "b"};
             const value3: ValueHolder = {IonBinary: "c"};
@@ -124,41 +205,42 @@ describe("Result", () => {
                 };
             };
             const result: Result = await Result.create(testTransactionId, testPageWithTokenAndValue, mockCommunicator);
-            const resultList: Reader[] = result.getResultList();
+            const resultList: dom.Value[] = result.getResultList();
 
             chai.assert.equal(allValues.length + testValueHolder.length, resultList.length);
             // Need to check if the initial Page's value and the first element in resultList is equivalent.
             chai.assert.equal(
-                JSON.stringify(makeReader(Result._handleBlob(testValueHolder[0].IonBinary))),
-                JSON.stringify(resultList[0]));
+                resultList[0],
+                testValueHolder[0].IonBinary
+            );
 
             // Now check if the rest of the resultList matches up with the Page's values returned from the Communicator.
             for (let i = 0; i < allValues.length; i++) {
                 chai.assert.equal(
-                    JSON.stringify(makeReader(Result._handleBlob(allValues[i].IonBinary))),
-                    JSON.stringify(resultList[i+1])
+                    resultList[i+1],
+                    allValues[i].IonBinary
                 );
             }
         });
 
-        it("should return a list of Readers when Result object created with bufferResultStream()", async () => {
+        it("should return a list of Ion values when Result object created with bufferResultStream()", async () => {
             const value1: ValueHolder = {IonBinary: "a"};
             const value2: ValueHolder = {IonBinary: "b"};
             const value3: ValueHolder = {IonBinary: "c"};
             const value4: ValueHolder = {IonBinary: "d"};
-            const readers: Reader[] = [
-                makeReader(Result._handleBlob(value1.IonBinary)),
-                makeReader(Result._handleBlob(value2.IonBinary)),
-                makeReader(Result._handleBlob(value3.IonBinary)),
-                makeReader(Result._handleBlob(value4.IonBinary))
+            const values: dom.Value[] = [
+                dom.load(Result._handleBlob(value1.IonBinary)),
+                dom.load(Result._handleBlob(value2.IonBinary)),
+                dom.load(Result._handleBlob(value3.IonBinary)),
+                dom.load(Result._handleBlob(value4.IonBinary))
             ];
             let eventCount: number = 0;
             const mockResultStream: Readable = new Readable({
                 objectMode: true,
                 read: function(size) {
-                    if (eventCount < readers.length) {
+                    if (eventCount < values.length) {
                         eventCount += 1;
-                        return this.push(readers[eventCount-1]);
+                        return this.push(values[eventCount-1]);
                     } else {
                         return this.push(null);
                     }
@@ -166,13 +248,13 @@ describe("Result", () => {
             });
 
             const result: Result = await Result.bufferResultStream(<ResultStream> mockResultStream);
-            const resultList: Reader[] = result.getResultList();
+            const resultList: dom.Value[] = result.getResultList();
 
-            chai.assert.equal(readers.length, resultList.length);
+            chai.assert.equal(values.length, resultList.length);
             resultList.forEach((result, i) => {
                 chai.assert.equal(
-                    JSON.stringify(result),
-                    JSON.stringify(readers[i])
+                    result,
+                    values[i]
                 );
             });
         });

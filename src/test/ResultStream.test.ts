@@ -17,12 +17,10 @@ import "mocha";
 import { Page, ValueHolder } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import * as ionJs from "ion-js";
-import { Lock } from "semaphore-async-await";
+import { dom } from "ion-js";
 import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
-import { ClientException } from "../errors/Errors";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 
@@ -97,10 +95,10 @@ describe("ResultStream", () => {
             const _readStub = sandbox.stub(resultStream as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.returns(3);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.returns(3);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(true);
 
@@ -120,10 +118,10 @@ describe("ResultStream", () => {
             resultStream["_cachedPage"] = testPage;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.returns(3);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.returns(3);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(true);
 
@@ -143,10 +141,10 @@ describe("ResultStream", () => {
             resultStream["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.returns(3);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.returns(3);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(true);
 
@@ -167,11 +165,11 @@ describe("ResultStream", () => {
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
 
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.onCall(2).returns(3);
-            makeReaderStub.returns(4);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.onCall(2).returns(3);
+            domLoadStub.returns(4);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.onCall(0).returns(true);
             pushStub.onCall(1).returns(false);
@@ -179,7 +177,7 @@ describe("ResultStream", () => {
 
             await resultStream["_pushPageValues"]();
 
-            sinon.assert.calledTwice(makeReaderStub);
+            sinon.assert.calledTwice(domLoadStub);
             sinon.assert.calledTwice(pushStub);
             sinon.assert.notCalled(_readStub);
             chai.assert.isTrue(resultStream["_shouldPushCachedPage"]);
@@ -216,10 +214,10 @@ describe("ResultStream", () => {
             const _readStub = sandbox.stub(resultStream as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.returns(3);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.returns(3);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(true);
 
@@ -239,8 +237,8 @@ describe("ResultStream", () => {
             const _readStub = sandbox.stub(resultStream as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(false);
 
@@ -256,10 +254,10 @@ describe("ResultStream", () => {
             const _readStub = sandbox.stub(resultStream as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
-            const makeReaderStub = sandbox.stub(ionJs as any, "makeReader");
-            makeReaderStub.onCall(0).returns(1);
-            makeReaderStub.onCall(1).returns(2);
-            makeReaderStub.returns(3);
+            const domLoadStub = sandbox.stub(dom as any, "load");
+            domLoadStub.onCall(0).returns(1);
+            domLoadStub.onCall(1).returns(2);
+            domLoadStub.returns(3);
             const pushStub = sandbox.stub(resultStream, "push");
             pushStub.returns(true);
 

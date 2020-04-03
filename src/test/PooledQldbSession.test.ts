@@ -16,13 +16,13 @@ import "mocha";
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
+import { dom } from "ion-js";
 import * as sinon from "sinon";
 
 import * as LogUtil from "../LogUtil";
 import { SessionClosedError } from "../errors/Errors";
 import { PooledQldbSession } from "../PooledQldbSession";
 import { QldbSessionImpl } from "../QldbSessionImpl";
-import { createQldbWriter, QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
 import { Transaction } from "../Transaction";
 
@@ -48,9 +48,6 @@ describe("PooledQldbSession", () => {
         pooledQldbSession = new PooledQldbSession(mockQldbSession, testLambda);
         mockQldbSession.getLedgerName = () => {
             return testLedgerName;
-        };
-        mockQldbSession.executeStatement = async () => {
-            return mockResult;
         };
         mockQldbSession.executeLambda = async () => {
             return mockResult;
@@ -98,8 +95,8 @@ describe("PooledQldbSession", () => {
     describe("#executeLambda()", () => {
         it("should return a Result object when called", async () => {
             const executeSpy = sandbox.spy(mockQldbSession, "executeLambda");
-            const query = async (txn) => {
-                return await txn.executeInline(testStatement);
+            const query = async (txn: any) => {
+                return await txn.execute(testStatement);
             };
             const retryIndicator = () => {};
             const result: Result = await pooledQldbSession.executeLambda(query, retryIndicator);
@@ -112,7 +109,7 @@ describe("PooledQldbSession", () => {
             pooledQldbSession["_isClosed"] = true;
             const executeSpy = sandbox.spy(mockQldbSession, "executeLambda");
             const error = await chai.expect(pooledQldbSession.executeLambda(async (txn) => {
-                return await txn.executeInline(testStatement);
+                return await txn.execute(testStatement);
             })).to.be.rejected;
             chai.assert.equal(error.name, "SessionClosedError");
             sinon.assert.notCalled(executeSpy);
@@ -124,43 +121,8 @@ describe("PooledQldbSession", () => {
             };
             const executeSpy = sandbox.spy(mockQldbSession, "executeLambda");
             await chai.expect(pooledQldbSession.executeLambda(async (txn) => {
-                return await txn.executeInline(testStatement);
+                return await txn.execute(testStatement);
             })).to.be.rejected;
-            sinon.assert.calledOnce(executeSpy);
-        });
-    });
-
-    describe("#executeStatement()", () => {
-        it("should return a Result object when provided with a statement", async () => {
-            const executeSpy = sandbox.spy(mockQldbSession, "executeStatement");
-            const result: Result = await pooledQldbSession.executeStatement(testStatement);
-            chai.assert.equal(result, mockResult);
-            sinon.assert.calledOnce(executeSpy);
-        });
-
-        it("should return a Result object when provided with a statement and parameters", async () => {
-            const executeSpy = sandbox.spy(mockQldbSession, "executeStatement");
-            const mockQldbWriter = <QldbWriter><any> sandbox.mock(createQldbWriter);
-            const result: Result = await pooledQldbSession.executeStatement(testStatement, [mockQldbWriter]);
-            chai.assert.equal(result, mockResult);
-            sinon.assert.calledOnce(executeSpy);
-            sinon.assert.calledWith(executeSpy, testStatement, [mockQldbWriter]);
-        });
-
-        it("should return a SessionClosedError wrapped in a rejected promise when closed", async () => {
-            pooledQldbSession["_isClosed"] = true;
-            const executeSpy = sandbox.spy(mockQldbSession, "executeStatement");
-            const error = await chai.expect(pooledQldbSession.executeStatement(testStatement)).to.be.rejected;
-            chai.assert.equal(error.name, "SessionClosedError");
-            sinon.assert.notCalled(executeSpy);
-        });
-
-        it("should return a rejected promise when error is thrown", async () => {
-            mockQldbSession.executeStatement = async () => {
-                throw new Error(testMessage);
-            };
-            const executeSpy = sandbox.spy(mockQldbSession, "executeStatement");
-            await chai.expect(pooledQldbSession.executeStatement(testStatement)).to.be.rejected;
             sinon.assert.calledOnce(executeSpy);
         });
     });

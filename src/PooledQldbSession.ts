@@ -14,8 +14,6 @@
 import { SessionClosedError } from "./errors/Errors";
 import { QldbSession } from "./QldbSession";
 import { QldbSessionImpl } from "./QldbSessionImpl";
-import { QldbWriter } from "./QldbWriter";
-import { Result } from "./Result";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
 
@@ -68,26 +66,6 @@ export class PooledQldbSession implements QldbSession {
     ): Promise<any> {
         this._throwIfClosed()
         return await this._session.executeLambda(queryLambda, retryIndicator);
-    }
-    
-    /**
-     * Implicitly start a transaction, execute the statement, and commit the transaction, retrying up to the
-     * retry limit if an OCC conflict or retriable exception occurs.
-     * 
-     * @param statement The statement to execute.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute.
-     * @param retryIndicator An optional lambda that is invoked when the `statement` is about to be retried due to an 
-     *                       OCC conflict or retriable exception.
-     * @returns Promise which fulfills with a Result.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
-     */
-    async executeStatement(
-        statement: string, 
-        parameters: QldbWriter[] = [],
-        retryIndicator?: (retryAttempt: number) => void
-    ): Promise<Result> {
-        this._throwIfClosed();
-        return await this._session.executeStatement(statement, parameters, retryIndicator);
     }
 
     /**

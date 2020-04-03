@@ -72,11 +72,19 @@ export class QldbDriver {
      * @throws {@linkcode DriverClosedError} when this driver is closed.
      */
     async getSession(): Promise<QldbSession> {
-        if (this._isClosed) {
-            throw new DriverClosedError();
-        }
+        this._throwIfClosed();
         debug("Creating a new session.");
         const communicator: Communicator = await Communicator.create(this._qldbClient, this._ledgerName);
         return new QldbSessionImpl(communicator, this._retryLimit);
+    }
+
+    /**
+     * Check and throw if this driver is closed.
+     * @throws {@linkcode DriverClosedError} when this driver is closed.
+     */
+    protected _throwIfClosed(): void {
+        if (this._isClosed) {
+            throw new DriverClosedError();
+        }
     }
 }

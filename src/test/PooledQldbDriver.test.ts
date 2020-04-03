@@ -26,8 +26,10 @@ import { DriverClosedError, SessionPoolEmptyError } from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 import { PooledQldbDriver } from "../PooledQldbDriver";
 import { QldbDriver } from "../QldbDriver";
-import { QldbSessionImpl } from "../QldbSessionImpl";
 import { QldbSession } from "../QldbSession";
+import { QldbSessionImpl } from "../QldbSessionImpl";
+import { Result } from "../Result";
+import { TransactionExecutor } from "../TransactionExecutor";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -56,6 +58,15 @@ const testLowLevelClientOptions: ClientConfiguration = {
         agent: mockAgent
     }
 };
+
+const mockResult: Result = <Result><any> sandbox.mock(Result);
+const mockQldbSession: QldbSession = <QldbSession><any> sandbox.mock(QLDBSession);
+mockQldbSession.executeLambda = async () => {
+    return mockResult;
+}
+mockQldbSession.close = () => {
+    return;
+}
 
 describe("PooledQldbDriver", () => {
     beforeEach(() => {
@@ -135,6 +146,40 @@ describe("PooledQldbDriver", () => {
             sinon.assert.calledOnce(close1Spy);
             sinon.assert.calledOnce(close2Spy);
             chai.assert.equal(pooledQldbDriver["_isClosed"], true);
+        });
+    });
+
+    describe("#executeLambda()", () => {
+        it("should start a session and return the delegated call to the session", async () => {
+            const getSessionStub = sandbox.stub(pooledQldbDriver, "getSession");
+            getSessionStub.returns(Promise.resolve(mockQldbSession));
+            const executeLambdaSpy = sandbox.spy(mockQldbSession, "executeLambda");
+            const closeSessionSpy = sandbox.spy(mockQldbSession, "close");
+            const lambda = (transactionExecutor: TransactionExecutor) => {
+                return true;
+            };
+            const retryIndicator = (retry: number) => {
+                return;
+            };
+            const result = await pooledQldbDriver.executeLambda(lambda, retryIndicator);
+
+            chai.assert.equal(result, mockResult);
+            sinon.assert.calledOnce(executeLambdaSpy);
+            sinon.assert.calledWith(executeLambdaSpy, lambda, retryIndicator);
+            sinon.assert.calledOnce(closeSessionSpy);
+        });
+
+        it("should throw DriverClosedError wrapped in a rejected promise when closed", async () => {
+            const lambda = (transactionExecutor: TransactionExecutor) => {
+                return true;
+            };
+            const retryIndicator = (retry: number) => {
+                return;
+            };
+
+            pooledQldbDriver["_isClosed"] = true;
+            const error = await chai.expect(pooledQldbDriver.executeLambda(lambda, retryIndicator)).to.be.rejected;
+            chai.assert.instanceOf(error, DriverClosedError);
         });
     });
 

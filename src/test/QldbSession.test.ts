@@ -26,7 +26,7 @@ import {
 } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { makeReader, Reader } from "ion-js";
+import { dom } from "ion-js";
 import * as sinon from "sinon";
 import { Readable } from "stream";
 import { format } from "util";
@@ -133,50 +133,50 @@ describe("QldbSession", () => {
     });
 
     describe("#executeLambda()", () => {
-        it("should return a Result object when called with executeInline as the lambda", async () => {
+        it("should return a Result object when called with execute as the lambda", async () => {
             qldbSession.startTransaction = async () => {
                 return mockTransaction;
             };
-            mockTransaction.executeInline = async () => {
+            mockTransaction.execute = async () => {
                 return mockResult;
             };
             mockTransaction.commit = async () => {};
 
-            const executeInlineSpy = sandbox.spy(mockTransaction, "executeInline");
+            const executeSpy = sandbox.spy(mockTransaction, "execute");
             const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
             const commitSpy = sandbox.spy(mockTransaction, "commit");
 
             const result = await qldbSession.executeLambda(async (txn) => {
-                return await txn.executeInline(testStatement);
+                return await txn.execute(testStatement);
             });
-            sinon.assert.calledOnce(executeInlineSpy);
-            sinon.assert.calledWith(executeInlineSpy, testStatement);
+            sinon.assert.calledOnce(executeSpy);
+            sinon.assert.calledWith(executeSpy, testStatement);
             sinon.assert.calledOnce(startTransactionSpy);
             sinon.assert.calledOnce(commitSpy);
             chai.assert.equal(result, mockResult);
         });
 
-        it("should return a Result object when called with executeStream as the lambda", async () => {
+        it("should return a Result object when called with executeAndStreamResults as the lambda", async () => {
             const resultStub = sandbox.stub(Result, "bufferResultStream");
             resultStub.returns(Promise.resolve(mockResult));
 
             qldbSession.startTransaction = async () => {
                 return mockTransaction;
             };
-            mockTransaction.executeStream = async () => {
+            mockTransaction.executeAndStreamResults = async () => {
                 return resultStreamObject;
             };
             mockTransaction.commit = async () => {};
 
-            const executeStreamSpy = sandbox.spy(mockTransaction, "executeStream");
+            const executeAndStreamResultsSpy = sandbox.spy(mockTransaction, "executeAndStreamResults");
             const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
             const commitSpy = sandbox.spy(mockTransaction, "commit");
 
             const result = await qldbSession.executeLambda(async (txn) => {
-                return await txn.executeStream(testStatement);
+                return await txn.executeAndStreamResults(testStatement);
             });
-            sinon.assert.calledOnce(executeStreamSpy);
-            sinon.assert.calledWith(executeStreamSpy, testStatement);
+            sinon.assert.calledOnce(executeAndStreamResultsSpy);
+            sinon.assert.calledWith(executeAndStreamResultsSpy, testStatement);
             sinon.assert.calledOnce(startTransactionSpy);
             sinon.assert.calledOnce(resultStub);
             sinon.assert.calledOnce(commitSpy);
@@ -187,7 +187,7 @@ describe("QldbSession", () => {
             qldbSession["_isClosed"] = true;
 
             const error = await chai.expect(qldbSession.executeLambda(async (txn) => {
-                return await txn.executeInline(testStatement);
+                return await txn.execute(testStatement);
             })).to.be.rejected;
             chai.assert.equal(error.name, "SessionClosedError");
         });
@@ -202,7 +202,7 @@ describe("QldbSession", () => {
             const throwIfClosedSpy = sandbox.spy(qldbSession as any, "_throwIfClosed");
 
             await chai.expect(qldbSession.executeLambda(async (txn) => {
-                return await txn.executeInline(testStatement);
+                return await txn.execute(testStatement);
             })).to.be.rejected;
             sinon.assert.calledOnce(startTransactionSpy);
             sinon.assert.calledOnce(noThrowAbortSpy);
@@ -291,28 +291,6 @@ describe("QldbSession", () => {
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw lambdaAbortedError;
             }, () => {})).to.be.rejected;
-        });
-    });
-
-    describe("#executeStatement()", () => {
-        it("should return a Result object when provided with a statement", async () => {
-            const executeStub = sandbox.stub(qldbSession, "executeLambda");
-            executeStub.returns(Promise.resolve(mockResult));
-            const result: Result = await qldbSession.executeStatement(testStatement);
-            chai.assert.equal(result, mockResult);
-            sinon.assert.calledOnce(executeStub);
-        });
-
-        it("should return a Result object when provided with a statement and parameters", async () => {
-            qldbSession.startTransaction = async () => {
-                return mockTransaction;
-            };
-
-            const mockQldbWriter = <QldbWriter><any>sandbox.mock(createQldbWriter);
-            const executeInlineSpy = sandbox.spy(mockTransaction, "executeInline");
-            const result: Result = await qldbSession.executeStatement(testStatement, [mockQldbWriter]);
-            chai.assert.equal(result, mockResult);
-            sinon.assert.calledWith(executeInlineSpy, testStatement, [mockQldbWriter]);
         });
     });
 
@@ -445,20 +423,20 @@ describe("QldbSession", () => {
     });
 
     describe("#_tableNameHelper()", () => {
-        it("should return a list of table names when called with a Stream containing valid Readers", async () => {
+        it("should return a list of table names when called with a Stream containing valid Ion values", async () => {
             const value1: ValueHolder = {IonBinary: format("{ name:\"%s\" }", testTableNames[0])};
             const value2: ValueHolder = {IonBinary: format("{ name:\"%s\" }", testTableNames[1])};
-            const readers: Reader[] = [
-                makeReader(Result._handleBlob(value1.IonBinary)),
-                makeReader(Result._handleBlob(value2.IonBinary))
+            const values: dom.Value[] = [
+                dom.load(Result._handleBlob(value1.IonBinary)),
+                dom.load(Result._handleBlob(value2.IonBinary))
             ];
             let eventCount: number = 0;
             const mockResultStream: Readable = new Readable({
                 objectMode: true,
                 read: function(size) {
-                    if (eventCount < readers.length) {
+                    if (eventCount < values.length) {
                         eventCount += 1;
-                        return this.push(readers[eventCount-1]);
+                        return this.push(values[eventCount-1]);
                     } else {
                         return this.push(null);
                     }
@@ -470,16 +448,16 @@ describe("QldbSession", () => {
             });
         });
 
-        it("should return a rejected promise when called with a Stream containing Readers with no struct", async () => {
+        it("should return a rejected promise when called with a Stream containing values with no struct", async () => {
             const value1: ValueHolder = {IonBinary: "notAStruct"};
-            const readers: Reader[] = [makeReader(Result._handleBlob(value1.IonBinary))];
+            const values: dom.Value[] = [dom.load(Result._handleBlob(value1.IonBinary))];
             let eventCount: number = 0;
             const mockResultStream: Readable = new Readable({
                 objectMode: true,
                 read: function(size) {
-                    if (eventCount < readers.length) {
+                    if (eventCount < values.length) {
                         eventCount += 1;
-                        return this.push(readers[eventCount-1]);
+                        return this.push(values[eventCount-1]);
                     } else {
                         return this.push(null);
                     }
@@ -490,16 +468,16 @@ describe("QldbSession", () => {
             chai.assert.equal(error.name, "ClientException");
         });
 
-        it("should return a rejected promise when called with a Stream containing Readers with no string", async () => {
-            const value1: ValueHolder = {IonBinary: "{ structKeyName:1 }"};
-            const readers: Reader[] = [makeReader(Result._handleBlob(value1.IonBinary))];
+        it("should return a rejected promise when called with a Stream containing values with no string", async () => {
+            const value1: ValueHolder = {IonBinary: "{ name:1 }"};
+            const values: dom.Value[] = [dom.load(Result._handleBlob(value1.IonBinary))];
             let eventCount: number = 0;
             const mockResultStream: Readable = new Readable({
                 objectMode: true,
                 read: function(size) {
-                    if (eventCount < readers.length) {
+                    if (eventCount < values.length) {
                         eventCount += 1;
-                        return this.push(readers[eventCount-1]);
+                        return this.push(values[eventCount-1]);
                     } else {
                         return this.push(null);
                     }

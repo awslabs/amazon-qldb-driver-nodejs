@@ -32,10 +32,11 @@ import { Communicator } from "../Communicator";
 import * as Errors from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 import { QldbHash } from "../QldbHash";
-import { createQldbWriter, QldbWriter } from "../QldbWriter";
+import { QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 import { Transaction } from "../Transaction";
+import { expect } from "chai";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -207,13 +208,13 @@ describe("Transaction", () => {
         });
     });
 
-    describe("#executeInline()", () => {
+    describe("#execute()", () => {
         it("should return a Result object when provided with a statement", async () => {
             Result.create = async () => {
                 return mockResult
             };
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            const result: Result = await transaction.executeInline(testStatement);
+            const result: Result = await transaction.execute(testStatement);
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testTransactionId, testStatement, []);
             chai.assert.equal(result, mockResult);
@@ -224,12 +225,26 @@ describe("Transaction", () => {
                 return mockResult
             };
             const sendExecuteSpy = sandbox.spy(transaction as any, "_sendExecute");
-            const qldbWriter1: QldbWriter = createQldbWriter();
-            const qldbWriter2: QldbWriter = createQldbWriter();
+            const param1: number = 5;
+            const param2: string = "a";
 
-            const result: Result = await transaction.executeInline(testStatement, [qldbWriter1, qldbWriter2]);
+            const result: Result = await transaction.execute(testStatement, param1, param2);
             sinon.assert.calledOnce(sendExecuteSpy);
-            sinon.assert.calledWith(sendExecuteSpy, testStatement, [qldbWriter1, qldbWriter2]);
+            sinon.assert.calledWith(sendExecuteSpy, testStatement, [param1, param2]);
+            chai.assert.equal(result, mockResult);
+        });
+
+        it("should properly map a list as a single parameter", async () => {
+            Result.create = async () => {
+                return mockResult
+            };
+            const sendExecuteSpy = sandbox.spy(transaction as any, "_sendExecute");
+            const param1: number = 5;
+            const param2: string = "a";
+
+            const result: Result = await transaction.execute(testStatement, [param1, param2]);
+            sinon.assert.calledOnce(sendExecuteSpy);
+            sinon.assert.calledWith(sendExecuteSpy, testStatement, [[param1, param2]]);
             chai.assert.equal(result, mockResult);
         });
 
@@ -240,20 +255,20 @@ describe("Transaction", () => {
             const isOccStub = sandbox.stub(Errors, "isOccConflictException");
             isOccStub.returns(false);
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            await chai.expect(transaction.executeInline(testStatement)).to.be.rejected;
+            await chai.expect(transaction.execute(testStatement)).to.be.rejected;
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testTransactionId, testStatement, []);
         });
 
         it("should call Communicator's executeStatement() twice when called twice", async () => {
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            await transaction.executeInline(testStatement);
-            await transaction.executeInline(testStatement);
+            await transaction.execute(testStatement);
+            await transaction.execute(testStatement);
             sinon.assert.calledTwice(executeSpy);
         });
     });
 
-    describe("#executeStream()", () => {
+    describe("#executeAndStreamResults()", () => {
         it("should return a Stream object when provided with a statement", async () => {
             const sampleResultStreamObject: ResultStream = new ResultStream(
                 testTransactionId,
@@ -261,7 +276,7 @@ describe("Transaction", () => {
                 mockCommunicator
             );
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            const result: Readable = await transaction.executeStream(testStatement);
+            const result: Readable = await transaction.executeAndStreamResults(testStatement);
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testTransactionId, testStatement, []);
             chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultStreamObject));
@@ -274,11 +289,11 @@ describe("Transaction", () => {
                 mockCommunicator
             );
             const sendExecuteSpy = sandbox.spy(transaction as any, "_sendExecute");
-            const qldbWriter1: QldbWriter = createQldbWriter();
-            const qldbWriter2: QldbWriter = createQldbWriter();
-            const result: Readable = await transaction.executeStream(testStatement, [qldbWriter1, qldbWriter2]);
+            const param1: number = 5;
+            const param2: string = "a";
+            const result: Readable = await transaction.executeAndStreamResults(testStatement, param1, param2);
             sinon.assert.calledOnce(sendExecuteSpy);
-            sinon.assert.calledWith(sendExecuteSpy, testStatement, [qldbWriter1, qldbWriter2]);
+            sinon.assert.calledWith(sendExecuteSpy, testStatement, [param1, param2]);
             chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultStreamObject));
         });
 
@@ -289,15 +304,15 @@ describe("Transaction", () => {
             const isOccStub = sandbox.stub(Errors, "isOccConflictException");
             isOccStub.returns(false);
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            await chai.expect(transaction.executeStream(testStatement)).to.be.rejected;
+            await chai.expect(transaction.executeAndStreamResults(testStatement)).to.be.rejected;
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testTransactionId, testStatement, []);
         });
 
         it("should call Communicator's executeStatement() twice when called twice", async () => {
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
-            await transaction.executeStream(testStatement);
-            await transaction.executeStream(testStatement);
+            await transaction.executeAndStreamResults(testStatement);
+            await transaction.executeAndStreamResults(testStatement);
             sinon.assert.calledTwice(executeSpy);
         });
     });
@@ -330,15 +345,17 @@ describe("Transaction", () => {
         });
 
         it("should compute hashes correctly when called", async () => {
-            const qldbWriter1: QldbWriter = createQldbWriter();
-            const qldbWriter2: QldbWriter = createQldbWriter();
-
-            const parameters: QldbWriter[] = [qldbWriter1, qldbWriter2];
-
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatement);
-            parameters.forEach((writer: QldbWriter) => {
+
+            const parameters: any[] = [5, "a"];
+            let qldbWriters: QldbWriter[] = parameters.map((value: any): QldbWriter => {
+                let writer = ionJs.makeBinaryWriter();
+                ionJs.dom.Value.from(value).writeTo(writer);
+                writer.close();
                 testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(writer.getBytes()));
+                return writer;
             });
+
             const updatedHash: Uint8Array = transaction["_txnHash"].dot(testStatementHash).getQldbHash();
 
             const toQldbHashSpy = sandbox.spy(QldbHash, "toQldbHash");
@@ -347,8 +364,8 @@ describe("Transaction", () => {
 
             sinon.assert.calledThrice(toQldbHashSpy);
             sinon.assert.calledWith(toQldbHashSpy, testStatement);
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriter1.getBytes());
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriter2.getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[0].getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[1].getBytes());
 
             chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
             chai.assert.equal(testExecuteStatementResult, result);
@@ -356,14 +373,15 @@ describe("Transaction", () => {
         });
 
         it("should compute hashes correctly when called from a statement that contain quotes", async () => {
-            const qldbWriter1: QldbWriter = createQldbWriter();
-            const qldbWriter2: QldbWriter = createQldbWriter();
-
-            const parameters: QldbWriter[] = [qldbWriter1, qldbWriter2];
-
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatementWithQuotes);
-            parameters.forEach((writer: QldbWriter) => {
+
+            const parameters: any[] = [5, "a"];
+            let qldbWriters: QldbWriter[] = parameters.map((value: any): QldbWriter => {
+                let writer = ionJs.makeBinaryWriter();
+                ionJs.dom.Value.from(value).writeTo(writer);
+                writer.close();
                 testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(writer.getBytes()));
+                return writer;
             });
             const updatedHash: Uint8Array = transaction["_txnHash"].dot(testStatementHash).getQldbHash();
 
@@ -376,8 +394,8 @@ describe("Transaction", () => {
 
             sinon.assert.calledThrice(toQldbHashSpy);
             sinon.assert.calledWith(toQldbHashSpy, testStatementWithQuotes);
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriter1.getBytes());
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriter2.getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[0].getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[1].getBytes());
 
             chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
             chai.assert.equal(testExecuteStatementResult, result);
@@ -413,27 +431,59 @@ describe("Transaction", () => {
             );
         });
 
-        it("should convert QldbWriters to ValueHolders correctly when called", async () => {
-            const qldbWriter1: QldbWriter = createQldbWriter();
-            const qldbWriter2: QldbWriter = createQldbWriter();
-
-            qldbWriter1.close();
-            qldbWriter2.close();
-            const parameters: QldbWriter[] = [qldbWriter1, qldbWriter2];
-
-            const valueHolderList: ValueHolder[] = [];
-            parameters.forEach((writer: QldbWriter) => {
-                const valueHolder: ValueHolder = {
-                    IonBinary: writer.getBytes()
-                };
-                valueHolderList.push(valueHolder);
-            });
+        it("should convert native types to ValueHolders correctly when called", async () => {
+            const parameters: any[] = [
+                true,
+                Date.now(),
+                3e2,
+                5,
+                2.2,
+                "a",
+                new ionJs.Timestamp(0, 2000),
+                new Uint8Array(3)
+            ];
 
             const executeStatementSpy = sandbox.spy(transaction["_communicator"], "executeStatement");
             const result: ExecuteStatementResult = await transaction["_sendExecute"](testStatement, parameters);
 
-            sinon.assert.calledWith(executeStatementSpy, transaction["_txnId"], testStatement, valueHolderList);
+            let expectedValueHolders: ValueHolder[] = [];
+            parameters.forEach((value: any) => {
+                const valueHolder: ValueHolder = {
+                    IonBinary:  ionJs.dumpBinary(value)
+                };
+                expectedValueHolders.push(valueHolder);
+            });
+
+            sinon.assert.calledWith(
+                executeStatementSpy,
+                transaction["_txnId"],
+                testStatement,
+                sinon.match.array.deepEquals(expectedValueHolders)
+            );
             chai.assert.equal(testExecuteStatementResult, result);
+        });
+
+        it("should throw Error when called with parameters which cannot be converted to Ion", async () => {
+            const validParameter1 = 5;
+            const invalidParameter =  Symbol('foo');
+            const validParameter2 = 3;
+
+
+            const toQldbHashSpy = sandbox.spy(QldbHash, "toQldbHash");
+            const executeStatementSpy = sandbox.spy(transaction["_communicator"], "executeStatement");
+            await expect(
+                transaction["_sendExecute"](testStatement, [validParameter1, invalidParameter, validParameter2])
+            ).to.be.rejected;
+
+            sinon.assert.notCalled(executeStatementSpy);
+
+            sinon.assert.calledTwice(toQldbHashSpy);
+            sinon.assert.calledWith(toQldbHashSpy, testStatement);
+            //Ensure that the first valid parameter was added to qldbHash
+            sinon.assert.calledWith(toQldbHashSpy, ionJs.dumpBinary(validParameter1));
+            //Ensure that the second valid parameter was not called as the invalid parameter throws an error before it
+            sinon.assert.neverCalledWith(toQldbHashSpy, ionJs.dumpBinary(validParameter2));
+
         });
     });
 });

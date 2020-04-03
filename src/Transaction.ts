@@ -12,7 +12,7 @@
  */
 
 import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
-import { toBase64 } from "ion-js";
+import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
 import { Readable } from "stream";
 
@@ -20,9 +20,9 @@ import { Communicator } from "./Communicator";
 import { ClientException, isOccConflictException, TransactionClosedError } from "./errors/Errors";
 import { warn } from "./LogUtil";
 import { QldbHash } from "./QldbHash";
-import { QldbWriter } from "./QldbWriter";
 import { Result } from "./Result";
 import { ResultStream } from "./ResultStream";
+import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
  * A class representing a QLDB transaction.
@@ -42,7 +42,7 @@ import { ResultStream } from "./ResultStream";
  * When an OCC conflict occurs, the transaction is closed and must be handled manually by creating a new transaction
  * and re-executing the desired queries.
  */
-export class Transaction {
+export class Transaction implements TransactionExecutable {
     private _communicator: Communicator;
     private _txnId: string;
     private _isClosed: boolean;
@@ -114,24 +114,37 @@ export class Transaction {
     }
 
     /**
-     * Execute the specified statement in the current transaction.
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which eventually returns all the results loaded into memory.
+     *
      * @param statement A statement to execute against QLDB as a string.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute against QLDB.
-     * @returns Promise which fulfills with a fully-buffered Result.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with all results loaded into memory
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeInline(statement: string, parameters: QldbWriter[] = []): Promise<Result> {
+    async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
         const inlineResult = Result.create(this._txnId, result.FirstPage, this._communicator);
         return inlineResult;
     }
 
     /**
-     * Execute the specified statement in the current transaction.
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which fulfills with Readable Stream, which allows you to stream one record at time
+     *
      * @param statement A statement to execute against QLDB as a string.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute against QLDB.
-     * @returns Promise which fulfills with a Readable.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with a Readable Stream
+     * @throws {@linkcode TransactionClosedError} when the transaction is closed.
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeStream(statement: string, parameters: QldbWriter[] = []): Promise<Readable> {
+    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
         return new ResultStream(this._txnId, result.FirstPage, this._communicator);
     }
@@ -154,11 +167,12 @@ export class Transaction {
     /**
      * Helper method to execute statement against QLDB.
      * @param statement A statement to execute against QLDB as a string.
-     * @param parameters A list of QLDB writers containing Ion values to execute against QLDB.
+     * @param parameters An optional list of Ion values or JavaScript native types that are convertible to Ion for
+     *                   filling in parameters of the statement.
      * @returns Promise which fulfills with a ExecuteStatementResult object.
      * @throws {@linkcode TransactionClosedError} when transaction is closed.
      */
-    private async _sendExecute(statement: string, parameters: QldbWriter[]): Promise<ExecuteStatementResult> {
+    private async _sendExecute(statement: string, parameters: any[]): Promise<ExecuteStatementResult> {
         if (this._isClosed) {
             throw new TransactionClosedError();
         }
@@ -167,16 +181,14 @@ export class Transaction {
             await this._hashLock.acquire();
             let statementHash: QldbHash = QldbHash.toQldbHash(statement);
 
-            const valueHolderList: ValueHolder[] = parameters.map((writer: QldbWriter) => {
+            const valueHolderList: ValueHolder[] = parameters.map((param: any) => {
+                let ionBinary: Uint8Array;
                 try {
-                    writer.close();
-                } catch (e) {
-                    warn(
-                        "Error encountered when attempting to close parameter writer. This warning can be ignored if " +
-                        `the writer was manually closed: ${e}.`
-                    );
+                    ionBinary = dumpBinary(param);
+                } catch(e) {
+                    e.message = `Failed to convert parameter ${String(param)} to Ion Binary: ${e.message}`;
+                    throw e;
                 }
-                const ionBinary: Uint8Array = writer.getBytes();
                 statementHash = statementHash.dot(QldbHash.toQldbHash(ionBinary));
                 const valueHolder: ValueHolder = {
                     IonBinary: ionBinary
