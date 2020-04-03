@@ -14,14 +14,14 @@
 import { Readable } from "stream";
 
 import { LambdaAbortedError } from "./errors/Errors";
-import { QldbWriter } from "./QldbWriter";
 import { Result } from "./Result";
 import { Transaction } from "./Transaction";
+import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
  * A class to handle lambda execution.
  */
-export class TransactionExecutor {
+export class TransactionExecutor implements TransactionExecutable {
     _transaction: Transaction;
 
     /**
@@ -41,25 +41,36 @@ export class TransactionExecutor {
     }
 
     /**
-     * Execute the specified statement in the current transaction.
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which eventually returns all the results loaded into memory.
+     *
      * @param statement The statement to execute.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute.
-     * @returns Promise which fulfills with a Result.
-     * @throws {@linkcode TransactionClosedError} when the transaction is closed.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with all results loaded into memory
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeInline(statement: string, parameters: QldbWriter[] = []): Promise<Result> {
-        return await this._transaction.executeInline(statement, parameters);
+    async execute(statement: string, ...parameters: any[]): Promise<Result> {
+        return await this._transaction.execute(statement, ...parameters);
     }
 
     /**
-     * Execute the specified statement in the current transaction.
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which fulfills with Readable interface, which allows you to stream one record at time
+     *
      * @param statement The statement to execute.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute.
-     * @returns Promise which fulfills with a ResultStream.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with a Readable Stream
      * @throws {@linkcode TransactionClosedError} when the transaction is closed.
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeStream(statement: string, parameters: QldbWriter[] = []): Promise<Readable> {
-        return await this._transaction.executeStream(statement, parameters);
+    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
+        return await this._transaction.executeAndStreamResults(statement, ...parameters);
     }
 
     /**

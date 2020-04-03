@@ -12,7 +12,7 @@
  */
 
 import { FetchPageResult, Page } from "aws-sdk/clients/qldbsession";
-import { makeReader, Reader } from "ion-js";
+import { dom } from "ion-js";
 import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
@@ -62,7 +62,7 @@ export class ResultStream extends Readable {
 
     /**
      * Pushes the values for the Node Streams Readable Interface. This method fetches the next page if is required and
-     * handles converting the values returned from QLDB into a Reader.
+     * handles converting the values returned from QLDB into an Ion value.
      * @returns Promise which fulfills with void.
      */
     private async _pushPageValues(): Promise<void> {
@@ -84,9 +84,9 @@ export class ResultStream extends Readable {
             }
 
             while (this._retrieveIndex < this._cachedPage.Values.length) {
-                const reader: Reader = 
-                    makeReader(Result._handleBlob(this._cachedPage.Values[this._retrieveIndex++].IonBinary));
-                canPush = this.push(reader);
+                const ionValue: dom.Value =
+                    dom.load(Result._handleBlob(this._cachedPage.Values[this._retrieveIndex++].IonBinary));
+                canPush = this.push(ionValue);
                 if (!canPush) {
                     this._shouldPushCachedPage = this._retrieveIndex < this._cachedPage.Values.length;
                     return;

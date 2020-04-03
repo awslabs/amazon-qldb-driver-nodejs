@@ -12,7 +12,7 @@
  */
 
 import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
-import { IonTypes, Reader } from "ion-js";
+import { dom, IonTypes, IonType } from "ion-js";
 import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
@@ -26,7 +26,6 @@ import {
 } from "./errors/Errors";
 import { info, warn } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
-import { QldbWriter } from "./QldbWriter";
 import { Result } from "./Result";
 import { ResultStream } from "./ResultStream";
 import { Transaction } from "./Transaction";
@@ -140,27 +139,6 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * Implicitly start a transaction, execute the statement, and commit the transaction, retrying up to the
-     * retry limit if an OCC conflict or retriable exception occurs.
-     *
-     * @param statement The statement to execute.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute.
-     * @param retryIndicator An optional lambda that is invoked when the `statement` is about to be retried due to an
-     *                       OCC conflict or retriable exception.
-     * @returns Promise which fulfills with a Result.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
-     */
-    async executeStatement(
-        statement: string,
-        parameters: QldbWriter[] = [],
-        retryIndicator?: (retryAttempt: number) => void
-    ): Promise<Result> {
-        return await this.executeLambda(async (txn) => {
-            return await txn.executeInline(statement, parameters);
-        }, retryIndicator);
-    }
-
-    /**
      * Return the name of the ledger for the session.
      * @returns Returns the name of the ledger as a string.
      */
@@ -183,7 +161,7 @@ export class QldbSessionImpl implements QldbSession {
     async getTableNames(): Promise<string[]> {
         const statement: string = "SELECT name FROM information_schema.user_tables WHERE status = 'ACTIVE'";
         return await this.executeLambda(async (transactionExecutor) => {
-            const result: Readable = await transactionExecutor.executeStream(statement);
+            const result: Readable = await transactionExecutor.executeAndStreamResults(statement);
             return await this._tableNameHelper(result);
         });
     }
@@ -259,23 +237,23 @@ export class QldbSessionImpl implements QldbSession {
      * Helper function for getTableNames.
      * @param resultStream The result from QLDB containing the table names.
      * @returns Promise which fulfills with an array of table names or rejects with a {@linkcode ClientException}
-     * when the reader does not contain a struct or if the value within the struct is not of type string.
+     * when the Ion value does not contain a struct or if the value within the struct is not of type string.
      */
     private _tableNameHelper(resultStream: Readable): Promise<string[]> {
         return new Promise((res, rej) => {
             const listOfStrings: string[] = [];
-            resultStream.on("data", function(reader: Reader) {
-                let type: any = reader.next();
+            resultStream.on("data", function(value: dom.Value) {
+                let type: IonType = value.getType();
                 if (type.binaryTypeId !== IonTypes.STRUCT.binaryTypeId) {
                     return rej(new ClientException(
                         `Unexpected format: expected struct, but got IonType with binary encoding: ` +
                         `${type.binaryTypeId}`
                     ));
                 }
-                reader.stepIn();
-                type = reader.next();
+                value = value.get("name");
+                type = value.getType();
                 if (type.binaryTypeId === IonTypes.STRING.binaryTypeId) {
-                    listOfStrings.push(reader.stringValue());
+                    listOfStrings.push(value.stringValue());
                 } else {
                     return rej(new ClientException(
                         `Unexpected format: expected string, but got IonType with binary encoding: ` +

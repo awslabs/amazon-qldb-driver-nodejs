@@ -1,9 +1,12 @@
 # Amazon QLDB Node.js Driver
 
+[![NPM Version](https://img.shields.io/badge/npm-v1.0.0--rc.1-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)[![Documentation](https://img.shields.io/badge/docs-api-green.svg)](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html)
+
 This is the Node.js driver for Amazon Quantum Ledger Database (QLDB), which allows Node.js developers
 to write software that makes use of AmazonQLDB.
 
 **This is a preview release of the Amazon QLDB Driver for Node.js, and we do not recommend that it be used for production purposes.**
+
 
 ## Requirements
 
@@ -93,30 +96,6 @@ or
 TypeDoc is used for documentation. You can generate HTML locally with the following:
 
 ```npm run doc```
-
-## Release Notes
-
-### Release 0.1.2-preview.1
-
-* Fix : "Error: stream.push() after EOF" bug [#7](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/7)
-* Fix : On reading from ResultStream, potential event listeners might not have received an error. Error fixed by rightly calling the destroy method and passing the error to it.
-* Fix : On starting a transaction, on consuming the resultstream, the last value could sometimes show up twice.
-
-### Release 0.1.1-preview.2 (December 26, 2019)
-
-
-* Fix "Digests don't match" bug [#8](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/8)
-* Renamed src/logUtil.ts to src/LogUtil.ts to match PascalCase.
-
-### Release 0.1.0-preview.2 (November 12, 2019)
-
-* Fix a bug in the test command that caused unit tests to fail compilation.
-* Small clarifications to the README.
-* Addition of a valid `buildspec.yml` file for running unit tests via CodeBuild.
-
-### Release 0.1.0-preview.1 (November 8, 2019)
-
-Preview release of the driver.
 
 ## License
 

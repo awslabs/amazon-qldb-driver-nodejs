@@ -11,10 +11,8 @@
  * and limitations under the License.
  */
 
-import { Result } from "./Result";
-import { QldbWriter } from "./QldbWriter";
+import { Executable } from "./Executable";
 import { Transaction } from "./Transaction";
-import { TransactionExecutor } from "./TransactionExecutor";
 
 /**
  * The top-level interface for a QldbSession object for interacting with QLDB. A QldbSession is linked to the specified 
@@ -40,43 +38,12 @@ import { TransactionExecutor } from "./TransactionExecutor";
  *    leaves the responsibility of OCC conflict handling up to the user. Transactions' methods cannot be automatically 
  *    retried, as the state of the transaction is ambiguous in the case of an unexpected error.
  */
-export interface QldbSession {
+export interface QldbSession extends Executable {
     
     /**
      * Close this session. No-op if already closed.
      */
     close: () => void;
-
-    /**
-     * Implicitly start a transaction, execute the lambda, and commit the transaction, retrying up to the
-     * retry limit if an OCC conflict or retriable exception occurs.
-     * 
-     * @param queryLambda A lambda representing the block of code to be executed within the transaction. This cannot 
-     *                    have any side effects as it may be invoked multiple times, and the result cannot be trusted 
-     *                    until the transaction is committed.
-     * @param retryIndicator An optional lambda that is invoked when the `querylambda` is about to be retried due to an 
-     *                       OCC conflict or retriable exception.
-     * @returns Promise which fulfills with the return value of the `queryLambda` which could be a {@linkcode Result} 
-     *          on the result set of a statement within the lambda.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
-     */
-    executeLambda: (queryLambda: (transactionExecutor: TransactionExecutor) => any,
-                    retryIndicator?: (retryAttempt: number) => void) => Promise<any>;
-
-    /**
-     * Implicitly start a transaction, execute the statement, and commit the transaction, retrying up to the
-     * retry limit if an OCC conflict or retriable exception occurs.
-     * 
-     * @param statement The statement to execute.
-     * @param parameters An optional list of QLDB writers containing Ion values to execute.
-     * @param retryIndicator An optional lambda that is invoked when the `statement` is about to be retried due to an 
-     *                       OCC conflict or retriable exception.
-     * @returns Promise which fulfills with a Result.
-     * @throws {@linkcode SessionClosedError} when the session is closed.
-     */
-    executeStatement: (statement: string,
-                       parameters: QldbWriter[],
-                       retryIndicator?: (retryAttempt: number) => void) => Promise<Result>;
 
     /**
      * Return the name of the ledger for the session.

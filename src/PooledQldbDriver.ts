@@ -15,12 +15,14 @@ import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
 import { globalAgent } from "http";
 import Semaphore from "semaphore-async-await";
 
-import { DriverClosedError, SessionPoolEmptyError } from "./errors/Errors";
+import { SessionPoolEmptyError } from "./errors/Errors";
+import { Executable } from "./Executable";
 import { debug } from "./LogUtil";
 import { PooledQldbSession } from "./PooledQldbSession";
 import { QldbDriver } from "./QldbDriver";
 import { QldbSession } from "./QldbSession";
 import { QldbSessionImpl } from "./QldbSessionImpl";
+import { TransactionExecutor } from "./TransactionExecutor";
 
 /**
  * Represents a factory for accessing pooled sessions to a specific ledger within QLDB. This class or
@@ -39,7 +41,7 @@ import { QldbSessionImpl } from "./QldbSessionImpl";
  * amount of connections the session client allows. {@linkcode PooledQldbDriver.close} should be called when this
  * factory is no longer needed in order to clean up resources, ending all sessions in the pool.
  */
-export class PooledQldbDriver extends QldbDriver {
+export class PooledQldbDriver extends QldbDriver implements Executable {
     private _poolLimit: number;
     private _timeoutMillis: number;
     private _availablePermits: number;
@@ -108,6 +110,34 @@ export class PooledQldbDriver extends QldbDriver {
     }
 
     /**
+     * Implicitly start a transaction within a new session, execute the lambda, commit the transaction, and close the
+     * session, retrying up to the retry limit if an OCC conflict or retriable exception occurs.
+     *
+     * @param queryLambda A lambda representing the block of code to be executed within the transaction. This cannot
+     *                    have any side effects as it may be invoked multiple times, and the result cannot be trusted
+     *                    until the transaction is committed.
+     * @param retryIndicator An optional lambda that is invoked when the `querylambda` is about to be retried due to an
+     *                       OCC conflict or retriable exception.
+     * @returns Promise which fulfills with the return value of the `queryLambda` which could be a {@linkcode Result}
+     *          on the result set of a statement within the lambda.
+     * @throws {@linkcode DriverClosedError} when this driver is closed.
+     */
+    async executeLambda(
+        queryLambda: (transactionExecutor: TransactionExecutor) => any,
+        retryIndicator?: (retryAttempt: number) => void
+    ): Promise<any> {
+        let session: QldbSession = null;
+        try  {
+            session = await this.getSession();
+            return await session.executeLambda(queryLambda, retryIndicator);
+        } finally {
+            if (session != null) {
+                session.close();
+            }
+        }
+    }
+
+    /**
      * This method will attempt to retrieve an active, existing session, or it will start a new session with QLDB if
      * none are available and the session pool limit has not been reached. If the pool limit has been reached, it will
      * attempt to retrieve a session from the pool until the timeout is reached.
@@ -116,9 +146,7 @@ export class PooledQldbDriver extends QldbDriver {
      * @throws {@linkcode SessionPoolEmptyError} if the timeout is reached while attempting to retrieve a session.
      */
     async getSession(): Promise<QldbSession> {
-        if (this._isClosed) {
-            throw new DriverClosedError();
-        }
+        this._throwIfClosed();
         debug(
             `Getting session. Current free session count: ${this._sessionPool.length}. ` +
             `Currently available permit count: ${this._availablePermits}.`
