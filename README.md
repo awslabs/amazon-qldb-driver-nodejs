@@ -35,12 +35,14 @@ To use the driver, in your package that wishes to use the driver, run the follow
 
 ```npm install amazon-qldb-driver-nodejs```
 
-The driver also has aws-sdk and ion-js as peer dependencies. Thus, they must also be dependencies of the package that
+The driver also has aws-sdk, ion-js and jsbi as peer dependencies. Thus, they must also be dependencies of the package that
 will be using the driver as a dependency.
 
 ```npm install aws-sdk```
 
 ```npm install ion-js```
+
+```npm install jsbi```
 
 Then from within your package, you can now use the driver by importing it. This example shows usage in TypeScript 
 specifying the QLDB ledger name and a specific region:
