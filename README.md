@@ -42,7 +42,7 @@ will be using the driver as a dependency.
 
 ```npm install ion-js```
 
-```npn install jsbi```
+```npm install jsbi```
 
 Then from within your package, you can now use the driver by importing it. This example shows usage in TypeScript 
 specifying the QLDB ledger name and a specific region:
