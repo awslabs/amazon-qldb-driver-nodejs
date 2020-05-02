@@ -94,6 +94,18 @@ or
 
 ```npm run testWithCoverage```
 
+### Contract Tests
+
+You can run the integration tests with this command:
+
+```npm run contractTest```
+
+This command requires that credentials are pre-configured and it has the required permissions.
+
+Additionally, a region can be specified:
+
+```npm run contractTest us-east-2```
+
 ### Documentation 
 
 TypeDoc is used for documentation. You can generate HTML locally with the following:
