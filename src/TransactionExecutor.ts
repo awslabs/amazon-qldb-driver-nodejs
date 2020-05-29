@@ -44,6 +44,10 @@ export class TransactionExecutor implements TransactionExecutable {
      * Execute the specified statement in the current transaction. This method returns a promise
      * which eventually returns all the results loaded into memory.
      *
+     * The PartiQL statement executed via this transaction is not immediately committed.
+     * The entire transaction will be committed once the all the code in `transactionFunction`
+     * (passed as an argument to {@link QldbDriver.executeLambda}) completes.
+     *
      * @param statement The statement to execute.
      * @param parameters Variable number of arguments, where each argument corresponds to a
      *                  placeholder (?) in the PartiQL query.
@@ -59,6 +63,10 @@ export class TransactionExecutor implements TransactionExecutable {
     /**
      * Execute the specified statement in the current transaction. This method returns a promise
      * which fulfills with Readable interface, which allows you to stream one record at time
+     *
+     * The PartiQL statement executed via this transaction is not immediately committed.
+     * The entire transaction will be committed once the all the code in `transactionFunction`
+     * (passed as an argument to {@link QldbDriver.executeLambda}) completes.
      *
      * @param statement The statement to execute.
      * @param parameters Variable number of arguments, where each argument corresponds to a

@@ -39,6 +39,7 @@ import { createQldbWriter, QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 import { Transaction } from "../Transaction";
+import { expect } from "chai";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -406,86 +407,35 @@ describe("QldbSession", () => {
         });
     });
 
-    describe("#_retrySleep()", () => {
-        it("should sleep when called", async () => {
+    describe("#_calculateDelayTime()", () => {
+        it("should increase delay exponentially when called", async () => {
             const mathRandStub = sandbox.stub(Math, "random");
             mathRandStub.returns(1);
-            const attemptNumber: number = 1;
-            const exponentialBackoff: number = Math.min(TEST_SLEEP_CAP_MS, Math.pow(TEST_SLEEP_BASE_MS, attemptNumber));
-            const sleepValue: number = 1 * (exponentialBackoff + 1);
-
-            const clock = sinon.useFakeTimers();
-            const timeoutSpy = sandbox.spy(clock, "setTimeout");
-            await qldbSession["_retrySleep"](attemptNumber);
-            sinon.assert.calledOnce(timeoutSpy);
-            sinon.assert.calledWith(timeoutSpy, sinon.match.any, sleepValue);
+            const delayTime1: number = qldbSession["_calculateDelayTime"](1);
+            const delayTime2: number = qldbSession["_calculateDelayTime"](2);
+            const delayTime3: number = qldbSession["_calculateDelayTime"](3);
+            expect(delayTime2 - 1).to.equal((delayTime1 - 1) * 2);
+            expect(delayTime3 - 1).to.equal((delayTime1 - 1) * 4);
+            expect(delayTime3 - 1).to.equal((delayTime2 - 1) * 2);
         });
     });
 
-    describe("#_tableNameHelper()", () => {
-        it("should return a list of table names when called with a Stream containing valid Ion values", async () => {
-            const value1: ValueHolder = {IonBinary: format("{ name:\"%s\" }", testTableNames[0])};
-            const value2: ValueHolder = {IonBinary: format("{ name:\"%s\" }", testTableNames[1])};
-            const values: dom.Value[] = [
-                dom.load(Result._handleBlob(value1.IonBinary)),
-                dom.load(Result._handleBlob(value2.IonBinary))
-            ];
-            let eventCount: number = 0;
-            const mockResultStream: Readable = new Readable({
-                objectMode: true,
-                read: function(size) {
-                    if (eventCount < values.length) {
-                        eventCount += 1;
-                        return this.push(values[eventCount-1]);
-                    } else {
-                        return this.push(null);
-                    }
-                }
-            });
-            const tableNames: string[] = await qldbSession["_tableNameHelper"](<ResultStream> mockResultStream);
-            tableNames.forEach((tableName, i) => {
-                chai.assert.equal(tableName, testTableNames[i]);
-            });
+    describe("#_retrySleep()", () => {
+        it("should sleep for exponentially increasing time when called", async () => {
+            const sleepSpy = sandbox.stub(qldbSession as any ,"_sleep");
+
+            const mathRandStub = sandbox.stub(Math, "random");
+            mathRandStub.returns(1);
+            const delayTime1: number = qldbSession["_calculateDelayTime"](1);
+            const delayTime2: number = qldbSession["_calculateDelayTime"](2);
+            qldbSession["_retrySleep"](1);
+            qldbSession["_retrySleep"](2);
+            sleepSpy.firstCall.calledWith(delayTime1);
+            sleepSpy.secondCall.calledWith(delayTime2);
+            expect(delayTime2 - 1).to.equal((delayTime1 - 1) * 2);
+
+
         });
 
-        it("should return a rejected promise when called with a Stream containing values with no struct", async () => {
-            const value1: ValueHolder = {IonBinary: "notAStruct"};
-            const values: dom.Value[] = [dom.load(Result._handleBlob(value1.IonBinary))];
-            let eventCount: number = 0;
-            const mockResultStream: Readable = new Readable({
-                objectMode: true,
-                read: function(size) {
-                    if (eventCount < values.length) {
-                        eventCount += 1;
-                        return this.push(values[eventCount-1]);
-                    } else {
-                        return this.push(null);
-                    }
-                }
-            });
-            const error =
-                await chai.expect(qldbSession["_tableNameHelper"](<ResultStream> mockResultStream)).to.be.rejected;
-            chai.assert.equal(error.name, "ClientException");
-        });
-
-        it("should return a rejected promise when called with a Stream containing values with no string", async () => {
-            const value1: ValueHolder = {IonBinary: "{ name:1 }"};
-            const values: dom.Value[] = [dom.load(Result._handleBlob(value1.IonBinary))];
-            let eventCount: number = 0;
-            const mockResultStream: Readable = new Readable({
-                objectMode: true,
-                read: function(size) {
-                    if (eventCount < values.length) {
-                        eventCount += 1;
-                        return this.push(values[eventCount-1]);
-                    } else {
-                        return this.push(null);
-                    }
-                }
-            });
-            const error =
-                await chai.expect(qldbSession["_tableNameHelper"](<ResultStream> mockResultStream)).to.be.rejected;
-            chai.assert.equal(error.name, "ClientException");
-        });
     });
 });
