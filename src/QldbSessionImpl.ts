@@ -33,7 +33,7 @@ const SLEEP_CAP_MS: number = 5000;
 const SLEEP_BASE_MS: number = 10;
 
 /**
- * @deprecated [NOT RECOMMENDED} It is not recommended to use this class directly during transaction execution.
+ * @deprecated [NOT RECOMMENDED] It is not recommended to use this class directly during transaction execution.
  * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
  */
 export class QldbSessionImpl implements QldbSession {
@@ -48,7 +48,7 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     close(): void {
@@ -60,7 +60,7 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async executeLambda(
@@ -117,7 +117,7 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method.
      * Instead, please use {@linkcode QldbDriver.getTableNames} to get table names.
      */
     async getTableNames(): Promise<string[]> {
@@ -132,7 +132,7 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async startTransaction(): Promise<Transaction> {
@@ -146,7 +146,7 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async _abortOrClose(): Promise<boolean> {

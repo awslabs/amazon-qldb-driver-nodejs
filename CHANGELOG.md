@@ -3,7 +3,6 @@
 ## :tada: Enhancements
 
 * Session pooling functionality moved to QldbDriver.  More details can be found in the [release notes](http://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v1.0.0-rc.2)
-* `getTableNames` method added at the driver level.
 
 ## :bug: Fixes
 * Fixed the delay calculation logic when retrying the transaction due to failure.

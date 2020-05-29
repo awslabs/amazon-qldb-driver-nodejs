@@ -45,7 +45,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async abort(): Promise<void> {
@@ -57,7 +57,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async commit(): Promise<void> {
@@ -94,7 +94,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-      * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+      * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
       * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
       *
       * Execute the specified statement in the current transaction. This method
@@ -119,7 +119,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      *
      * @param statement A statement to execute against QLDB as a string.
@@ -137,7 +137,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-      * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+      * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
       * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
       *
       * Retrieve the transaction ID associated with this transaction.
