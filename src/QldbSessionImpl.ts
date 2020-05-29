@@ -12,12 +12,10 @@
  */
 
 import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
-import { dom, IonTypes, IonType } from "ion-js";
-import { Readable } from "stream";
+import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
 import {
-    ClientException,
     isInvalidSessionException,
     isOccConflictException,
     isRetriableException,
@@ -35,34 +33,14 @@ const SLEEP_CAP_MS: number = 5000;
 const SLEEP_BASE_MS: number = 10;
 
 /**
- * Represents a session to a specific ledger within QLDB, allowing for execution of PartiQL statements and
- * retrieval of the associated results, along with control over transactions for bundling multiple executions.
- *
- * The execute methods provided will automatically retry themselves in the case that an unexpected recoverable error
- * occurs, including OCC conflicts, by starting a brand new transaction and re-executing the statement within the new
- * transaction.
- *
- * There are three methods of execution, ranging from simple to complex; the first two are recommended for inbuilt
- * error handling:
- *  - {@linkcode QldbSessionImpl.executeStatement} allows for a single statement to be executed within a transaction
- *    where the transaction is implicitly created and committed, and any recoverable errors are transparently handled.
- *  - {@linkcode QldbSessionImpl.executeLambda} allow for more complex execution sequences where more than one
- *    execution can occur, as well as other method calls. The transaction is implicitly created and committed, and any
- *    recoverable errors are transparently handled.
- *  - {@linkcode QldbSessionImpl.startTransaction} allows for full control over when the transaction is committed and
- *    leaves the responsibility of OCC conflict handling up to the user. Transactions' methods cannot be automatically
- *    retried, as the state of the transaction is ambiguous in the case of an unexpected error.
+ * @deprecated [NOT RECOMMENDED} It is not recommended to use this class directly during transaction execution.
+ * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
  */
 export class QldbSessionImpl implements QldbSession {
     private _communicator: Communicator;
     private _retryLimit: number;
     private _isClosed: boolean;
 
-    /**
-     * Creates a QldbSessionImpl.
-     * @param communicator The Communicator object representing a communication channel with QLDB.
-     * @param retryLimit The limit for retries on execute methods when an OCC conflict or retriable exception occurs.
-     */
     constructor(communicator: Communicator, retryLimit: number) {
         this._communicator = communicator;
         this._retryLimit = retryLimit;
@@ -70,7 +48,8 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * Close this session. No-op if already closed.
+     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     close(): void {
         if (this._isClosed) {
@@ -81,17 +60,8 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * Implicitly start a transaction, execute the lambda, and commit the transaction, retrying up to the
-     * retry limit if an OCC conflict or retriable exception occurs.
-     *
-     * @param queryLambda A lambda representing the block of code to be executed within the transaction. This cannot
-     *                    have any side effects as it may be invoked multiple times, and the result cannot be trusted
-     *                    until the transaction is committed.
-     * @param retryIndicator An optional lambda that is invoked when the `querylambda` is about to be retried due to an
-     *                       OCC conflict or retriable exception.
-     * @returns Promise which fulfills with the return value of the `queryLambda` which could be a {@linkcode Result}
-     *          on the result set of a statement within the lambda.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
+     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async executeLambda(
         queryLambda: (transactionExecutor: TransactionExecutor) => any,
@@ -138,38 +108,32 @@ export class QldbSessionImpl implements QldbSession {
         }
     }
 
-    /**
-     * Return the name of the ledger for the session.
-     * @returns Returns the name of the ledger as a string.
-     */
     getLedgerName(): string {
         return this._communicator.getLedgerName();
     }
 
-    /**
-     * Returns the token for this session.
-     * @returns Returns the session token as a string.
-     */
     getSessionToken(): string {
         return this._communicator.getSessionToken();
     }
 
     /**
-     * Lists all tables in the ledger.
-     * @returns Promise which fulfills with an array of table names.
+     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method.
+     * Instead, please use {@linkcode QldbDriver.getTableNames} to get table names.
      */
     async getTableNames(): Promise<string[]> {
         const statement: string = "SELECT name FROM information_schema.user_tables WHERE status = 'ACTIVE'";
-        return await this.executeLambda(async (transactionExecutor) => {
-            const result: Readable = await transactionExecutor.executeAndStreamResults(statement);
-            return await this._tableNameHelper(result);
+        return await this.executeLambda(async (transactionExecutor: TransactionExecutor) : Promise<string[]> => {
+            const result: Result = await transactionExecutor.execute(statement);
+            const resultStructs: dom.Value[] = result.getResultList();
+            const listOfTableNames: string[] = resultStructs.map(tableNameStruct =>
+                tableNameStruct.get("name").stringValue());
+            return listOfTableNames;
         });
     }
 
     /**
-     * Start a transaction using an available database session.
-     * @returns Promise which fulfills with a transaction object.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
+     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async startTransaction(): Promise<Transaction> {
         this._throwIfClosed();
@@ -182,9 +146,8 @@ export class QldbSessionImpl implements QldbSession {
     }
 
     /**
-     * Determine if the session is alive by sending an abort message. This should only be used when the session is
-     * known to not be in use, otherwise the state will be abandoned.
-     * @returns Promise which fulfills with true if the abort succeeded, otherwise false.
+     * @deprecated [NOT RECOMMENDED} It is not recommended to use this method during transaction execution.
+     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
      */
     async _abortOrClose(): Promise<boolean> {
         if (this._isClosed) {
@@ -199,11 +162,6 @@ export class QldbSessionImpl implements QldbSession {
         }
     }
 
-    /**
-     * Send an abort request which will not throw on failure.
-     * @param transaction The transaction to abort.
-     * @returns Promise which fulfills with void.
-     */
     private async _noThrowAbort(transaction: Transaction): Promise<void> {
         try {
             if (null == transaction) {
@@ -216,60 +174,26 @@ export class QldbSessionImpl implements QldbSession {
         }
     }
 
-    /**
-     * Sleeps an exponentially increasing amount relative to `attemptNumber`.
-     * @param attemptNumber The attempt number for the retry, used for the exponential portion of the sleep.
-     * @returns Promise which fulfills with void.
-     */
-    private async _retrySleep(attemptNumber: number): Promise<void> {
-        const jitterRand: number = Math.random();
-        const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(SLEEP_BASE_MS, attemptNumber));
-        const sleep = (milliseconds: number) => {
-            return new Promise(resolve => setTimeout(resolve, milliseconds));
-        };
-        (async() => {
-            await sleep(jitterRand * (exponentialBackoff + 1));
-        })();
-
+    private _retrySleep(attemptNumber: number) {
+        const delayTime = this._calculateDelayTime(attemptNumber);
+        return this._sleep(delayTime);
     }
 
-    /**
-     * Helper function for getTableNames.
-     * @param resultStream The result from QLDB containing the table names.
-     * @returns Promise which fulfills with an array of table names or rejects with a {@linkcode ClientException}
-     * when the Ion value does not contain a struct or if the value within the struct is not of type string.
-     */
-    private _tableNameHelper(resultStream: Readable): Promise<string[]> {
-        return new Promise((res, rej) => {
-            const listOfStrings: string[] = [];
-            resultStream.on("data", function(value: dom.Value) {
-                let type: IonType = value.getType();
-                if (type.binaryTypeId !== IonTypes.STRUCT.binaryTypeId) {
-                    return rej(new ClientException(
-                        `Unexpected format: expected struct, but got IonType with binary encoding: ` +
-                        `${type.binaryTypeId}`
-                    ));
-                }
-                value = value.get("name");
-                type = value.getType();
-                if (type.binaryTypeId === IonTypes.STRING.binaryTypeId) {
-                    listOfStrings.push(value.stringValue());
-                } else {
-                    return rej(new ClientException(
-                        `Unexpected format: expected string, but got IonType with binary encoding: ` +
-                        `${type.binaryTypeId}.`
-                    ));
-                }
-            }).on("end", function() {
-                res(listOfStrings);
-            });
-        });
+    private _calculateDelayTime(attemptNumber: number) {
+        const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(2,  attemptNumber) * SLEEP_BASE_MS);
+        const jitterRand: number = this._getRandomArbitrary(0, (exponentialBackoff/2 + 1));
+        const delayTime: number = (exponentialBackoff/2) + jitterRand;
+        return delayTime;
     }
 
-    /**
-     * Check and throw if this session is closed.
-     * @throws {@linkcode SessionClosedError} when this session is closed.
-     */
+    private _sleep(sleepTime:number) {
+        return new Promise(resolve => setTimeout(resolve, sleepTime));
+    }
+
+    private _getRandomArbitrary(min:number, max:number) {
+        return Math.random() * (max - min) + min;
+    }
+
     private _throwIfClosed(): void {
         if (this._isClosed) {
             throw new SessionClosedError();

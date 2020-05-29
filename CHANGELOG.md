@@ -1,3 +1,16 @@
+# 1.0.0-rc.2 (2020-05-29)
+
+## :tada: Enhancements
+
+* Session pooling functionality moved to QldbDriver.  More details can be found in the [release notes](http://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v1.0.0-rc.2)
+* `getTableNames` method added at the driver level.
+
+## :bug: Fixes
+* Fixed the delay calculation logic when retrying the transaction due to failure.
+
+## :nut_and_bolt: Other
+* Added @deprecated annotation to methods which are not recommended to be used. Please see [release notes](http://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v1.0.0-rc.2) for more details.
+
 # 1.0.0-rc.1 (2020-04-03)
 
 ## :boom: Breaking changes
@@ -11,11 +24,11 @@
 
 ## :tada: Enhancements
 
-* [(#5)](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/5) The Ion Value results returned by `execute` and `executeAndStreamResults` can be converted into JSON String via `JSON.stringify(result)`  
+* [(#5)](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/5) The Ion Value results returned by `execute` and `executeAndStreamResults` can be converted into JSON String via `JSON.stringify(result)`
 
 * [(#26)](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/26) Introduced `executeLambda` method on Qldb Driver.
 
-  
+
 
 # 0.1.2-preview.1 (2020-03-06)
 
@@ -23,7 +36,7 @@
 
 * "Error: stream.push() after EOF" bug [#7](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/7)
 * On reading from ResultStream, potential event listeners might not have received an error. Error fixed by rightly calling the destroy method and passing the error to it.
-* On starting a transaction, on consuming the resultstream, the last value could sometimes show up twice. 
+* On starting a transaction, on consuming the resultstream, the last value could sometimes show up twice.
 
 # 0.1.1-preview.2 (2019-12-26)
 
@@ -31,7 +44,7 @@
 
 * "Digests don't match" bug [#8](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/8)
 
-## :nut_and_bolt: Other​ 
+## :nut_and_bolt: Other​
 
 * Renamed src/logUtil.ts to src/LogUtil.ts to match PascalCase.
 

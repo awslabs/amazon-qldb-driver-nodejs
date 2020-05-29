@@ -6,7 +6,7 @@
   },
   "name": "amazon-qldb-driver-nodejs",
   "description": "The Node.js driver for working with Amazon Quantum Ledger Database",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
@@ -29,6 +29,7 @@
     "ion-js": "~4.0.0",
     "jsbi": "~3.1.1",
     "mocha": "^6.2.0",
+    "mocha-param": "^2.0.1",
     "nyc": "^14.1.1",
     "sinon": "^7.3.2",
     "ts-node": "^8.3.0",
@@ -44,8 +45,9 @@
     "doc": "typedoc --out docs ./src --exclude **/*.test.ts",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build",
-    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} mocha -r ts-node/register src/**/*.test.ts",
-    "testWithCoverage": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ts-node/register src/**/*.test.ts && nyc report"
+    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} mocha -r ts-node/register src/test/*.test.ts",
+    "testWithCoverage": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ts-node/register src/test/*.test.ts && nyc report",
+    "integrationTest": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} mocha -r ts-node/register src/integrationtest/*.test.ts"
   },
   "author": {
     "name": "Amazon Web Services",
