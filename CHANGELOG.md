@@ -8,8 +8,13 @@
 ## :bug: Fixes
 * Fixed the delay calculation logic when retrying the transaction due to failure.
 
-## :nut_and_bolt: Other
-* Added @deprecated annotation to methods which are not recommended to be used. Please see [release notes](http://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v1.0.0-rc.2) for more details.
+## :warning: Deprecated
+
+* `PooledQldbDriver` has been deprecated and will be removed in future versions. Please use `QldbDriver` instead. Refer to the [release notes](https://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v1.0.0-rc.2)
+
+* `QldbSession.getTableNames`  method has been deprecated and will be removed in future versions. Please use `QldbDriver.getTableNames` method instead.
+
+* `QldbSession.executeLambda`  method has been deprecated and will be removed in future versions. Please use `QldbDriver.executeLambda` method instead.
 
 # 1.0.0-rc.1 (2020-04-03)
 
