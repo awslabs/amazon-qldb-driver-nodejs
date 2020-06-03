@@ -51,7 +51,7 @@ const testServiceConfigOptions = {
     region: "us-east-1"
 };
 
-const qldbDriver: QldbDriver = new QldbDriver("testLedger", testServiceConfigOptions));
+const qldbDriver: QldbDriver = new QldbDriver("testLedger", testServiceConfigOptions);
 qldbDriver.getTableNames().then(function(tableNames: string[]) {
     console.log(tableNames);
 });
