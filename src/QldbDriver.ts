@@ -154,13 +154,13 @@ export class QldbDriver {
      * @param retryIndicator An Optional function which will be invoked when the `transactionFunction` is about to be retried due to a failure.
      */
     async executeLambda(
-        transactionFuntion: (transactionExecutor: TransactionExecutor) => any,
+        transactionFunction: (transactionExecutor: TransactionExecutor) => any,
         retryIndicator?: (retryAttempt: number) => void
     ): Promise<any> {
         let session: QldbSession = null;
         try  {
             session = await this.getSession();
-            return await session.executeLambda(transactionFuntion, retryIndicator);
+            return await session.executeLambda(transactionFunction, retryIndicator);
         } finally {
             if (session != null) {
                 session.close();
