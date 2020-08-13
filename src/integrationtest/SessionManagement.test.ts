@@ -17,7 +17,8 @@ import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom } from "ion-js";
 
-import { SessionPoolEmptyError, DriverClosedError } from "../errors/Errors";
+import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
+import { isTransactionExpiredException, DriverClosedError, SessionPoolEmptyError } from "../errors/Errors";
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
 import { TransactionExecutor } from "../TransactionExecutor";
@@ -82,9 +83,9 @@ describe("SessionManagement", function() {
         }
     });
 
-    it("Throws exception when all the sessions are busy, pool limit is reached, and timeout is exceeded", async () => {
-        // Set the timeout to 1ms and pool limit to 1
-        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, undefined, 1, 1);
+    it("Throws exception when all the sessions are busy and pool limit is reached", async () => {
+        // Set maxConcurrentTransactions to 1
+        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, 1, defaultRetryConfig);
         try {
             // Execute and do not wait for the promise to resolve, exhausting the pool
             driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -104,23 +105,6 @@ describe("SessionManagement", function() {
         }
     });
 
-    it("Can get a session when the pool has no sessions, pool limit is reached, but a session is returned within the timeout", async () => {
-        // Set the timeout to 30000ms and pool limit to 1
-        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, undefined, 1, 30000);
-        try {
-            // Execute and do not wait for the promise to resolve, exhausting the pool
-            await driver.executeLambda(async (txn: TransactionExecutor) => {
-                await txn.execute(`SELECT name FROM ${constants.TABLE_NAME} WHERE name='Bob'`);
-            });
-            // Attempt to implicitly get a session by executing, waiting for up to 30000ms
-            await driver.executeLambda(async (txn: TransactionExecutor) => {
-                await txn.execute(`SELECT name FROM ${constants.TABLE_NAME} WHERE name='Bob'`);
-            });
-        } finally {
-            driver.close();
-        }
-    });
-
     it("Throws exception when the driver has been closed", async () => {
         const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
         driver.close();
@@ -132,6 +116,19 @@ describe("SessionManagement", function() {
             if (!(e instanceof DriverClosedError)) {
                 throw e;
             }
+        }
+    });
+
+    it("Throws exception when transaction expires due to timeout", async() => {
+        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
+        let error;
+        try {
+            error = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
+                // Wait for transaction to expire
+                await new Promise(resolve => setTimeout(resolve, 40000));
+            })).to.be.rejected;
+        } finally {
+            chai.assert.isTrue(isTransactionExpiredException(error));
         }
     });
 });

@@ -19,6 +19,7 @@ import { dom, IonType } from "ion-js";
 import { isOccConflictException } from "../errors/Errors";
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
+import { RetryConfig } from "../retry/RetryConfig";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
@@ -263,7 +264,8 @@ describe("StatementExecution", function() {
         chai.assert.equal(result, 1);
         
         // Create a driver that does not retry OCC errors
-        const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), 0);
+        const retryConfig: RetryConfig = new RetryConfig(0);
+        const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), 3, retryConfig);
         async function updateField(driver: QldbDriver): Promise<void> {
             await driver.executeLambda(async (txn: TransactionExecutor) => {
                 let currentValue: number;

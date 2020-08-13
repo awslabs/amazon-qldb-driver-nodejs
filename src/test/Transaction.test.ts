@@ -32,7 +32,6 @@ import { Communicator } from "../Communicator";
 import * as Errors from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 import { QldbHash } from "../QldbHash";
-import { QldbWriter } from "../QldbWriter";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 import { Transaction } from "../Transaction";
@@ -348,12 +347,10 @@ describe("Transaction", () => {
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatement);
 
             const parameters: any[] = [5, "a"];
-            let qldbWriters: QldbWriter[] = parameters.map((value: any): QldbWriter => {
-                let writer = ionJs.makeBinaryWriter();
-                ionJs.dom.Value.from(value).writeTo(writer);
-                writer.close();
-                testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(writer.getBytes()));
-                return writer;
+            let ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
+                let valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
+                testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(valueIonBinary));
+                return valueIonBinary;
             });
 
             const updatedHash: Uint8Array = transaction["_txnHash"].dot(testStatementHash).getQldbHash();
@@ -364,8 +361,8 @@ describe("Transaction", () => {
 
             sinon.assert.calledThrice(toQldbHashSpy);
             sinon.assert.calledWith(toQldbHashSpy, testStatement);
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[0].getBytes());
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[1].getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, ionBinaryValues[0]);
+            sinon.assert.calledWith(toQldbHashSpy, ionBinaryValues[1]);
 
             chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
             chai.assert.equal(testExecuteStatementResult, result);
@@ -376,12 +373,10 @@ describe("Transaction", () => {
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatementWithQuotes);
 
             const parameters: any[] = [5, "a"];
-            let qldbWriters: QldbWriter[] = parameters.map((value: any): QldbWriter => {
-                let writer = ionJs.makeBinaryWriter();
-                ionJs.dom.Value.from(value).writeTo(writer);
-                writer.close();
-                testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(writer.getBytes()));
-                return writer;
+            let ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
+                let valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
+                testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(valueIonBinary));
+                return valueIonBinary;
             });
             const updatedHash: Uint8Array = transaction["_txnHash"].dot(testStatementHash).getQldbHash();
 
@@ -394,8 +389,8 @@ describe("Transaction", () => {
 
             sinon.assert.calledThrice(toQldbHashSpy);
             sinon.assert.calledWith(toQldbHashSpy, testStatementWithQuotes);
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[0].getBytes());
-            sinon.assert.calledWith(toQldbHashSpy, qldbWriters[1].getBytes());
+            sinon.assert.calledWith(toQldbHashSpy, ionBinaryValues[0]);
+            sinon.assert.calledWith(toQldbHashSpy, ionBinaryValues[1]);
 
             chai.assert.equal(ionJs.toBase64(transaction["_txnHash"].getQldbHash()), ionJs.toBase64(updatedHash));
             chai.assert.equal(testExecuteStatementResult, result);
