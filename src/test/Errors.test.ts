@@ -31,7 +31,10 @@ import {
     LambdaAbortedError,
     SessionClosedError,
     SessionPoolEmptyError,
-    TransactionClosedError
+    TransactionClosedError,
+    StartTransactionError,
+    isTransactionExpiredException,
+    isBadRequestException
 } from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 
@@ -110,6 +113,17 @@ describe("Errors", () => {
         });
     });
 
+    describe("#StartTransactionError", () => {
+        it("should be a StartTransactionError when new StartTransactionError created", () => {
+            const logSpy = sandbox.spy(LogUtil, "error");
+            let badRequestException: Error = new Error("Some BadRequest Exception")
+            const error = new StartTransactionError(badRequestException);
+            chai.expect(error).to.be.instanceOf(StartTransactionError);
+            chai.assert.equal(error.name, "StartTransactionError");
+            sinon.assert.calledOnce(logSpy);
+            chai.assert.equal(error.cause, badRequestException);
+        });
+    });
     describe("#isInvalidParameterException()", () => {
         it("should return true when error is an InvalidParameterException", () => {
             mockError.code = "InvalidParameterException";
@@ -199,6 +213,37 @@ describe("Errors", () => {
             mockError.code = "NotRetriableException";
             mockError.statusCode = 200;
             chai.assert.isFalse(isRetriableException(mockError));
+        });
+    });
+
+    describe("#isTransactionExpiredException", () => {
+        it("should return true when error is an InvalidSessionException and message is Tranaction <txId> has expired", () => {
+            mockError.code = "InvalidSessionException";
+            mockError.message = "Transaction ABC has expired"
+            chai.assert.isTrue(isTransactionExpiredException(mockError));
+        });
+
+        it("should return false when error is an InvalidSessionException but message is different", () => {
+            mockError.code = "InvalidSessionException";
+            mockError.message = "SessionNotIdentified"
+            chai.assert.isFalse(isTransactionExpiredException(mockError));
+        });
+
+        it("should return false when error is not an InvalidSessionException ", () => {
+            mockError.code = "NotInvalidSessionException";
+            chai.assert.isFalse(isTransactionExpiredException(mockError));
+        });
+    });
+
+    describe("#isBadRequestException()", () => {
+        it("should return true when error is a BadRequestException", () => {
+            mockError.code = "BadRequestException";
+            chai.assert.isTrue(isBadRequestException(mockError));
+        });
+
+        it("should return false when error is not a BadRequestException", () => {
+            mockError.code = "NotBadRequestException";
+            chai.assert.isFalse(isBadRequestException(mockError));
         });
     });
 });

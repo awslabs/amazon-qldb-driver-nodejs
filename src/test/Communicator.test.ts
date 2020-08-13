@@ -295,12 +295,6 @@ describe("Communicator", () => {
         });
     });
 
-    describe("#getLedgerName()", () => {
-        it("should return the ledger name when called", () => {
-            const ledgerName: string = communicator.getLedgerName();
-            chai.assert.equal(ledgerName, testLedgerName);
-        });
-    });
 
     describe("#getQldbClient()", () => {
         it("should return the low level client when called", () => {

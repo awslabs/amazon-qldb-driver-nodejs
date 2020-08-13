@@ -25,9 +25,22 @@ import { ResultStream } from "./ResultStream";
 import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
- * @deprecated Use {@linkcode QldbDriver.executeLambda} instead to execute
- * transactions.
+ * A class representing a QLDB transaction.
  *
+ * Every transaction is tied to a parent (Pooled)QldbSession, meaning that if the parent session is closed or
+ * invalidated, the child transaction is automatically closed and cannot be used. Only one transaction can be active at
+ * any given time per parent session, and thus every transaction should call {@linkcode Transaction.abort} or
+ * {@linkcode Transaction.commit} when it is no longer needed, or when a new transaction is desired from the parent
+ * session.
+ *
+ * An InvalidSessionException indicates that the parent session is dead, and a new transaction cannot be created
+ * without a new (Pooled)QldbSession being created from the parent driver.
+ *
+ * Any unexpected errors that occur within a transaction should not be retried using the same transaction, as the state
+ * of the transaction is now ambiguous.
+ *
+ * When an OCC conflict occurs, the transaction is closed and must be handled manually by creating a new transaction
+ * and re-executing the desired queries.
  */
 export class Transaction implements TransactionExecutable {
     private _communicator: Communicator;
@@ -36,6 +49,11 @@ export class Transaction implements TransactionExecutable {
     private _txnHash: QldbHash;
     private _hashLock: Lock;
 
+    /**
+     * Create a Transaction.
+     * @param communicator The Communicator object representing a communication channel with QLDB.
+     * @param txnId The ID of the transaction.
+     */
     constructor(communicator: Communicator, txnId: string) {
         this._communicator = communicator;
         this._txnId = txnId;
@@ -45,8 +63,8 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
-     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
+     * Abort this transaction and close child ResultStream objects. No-op if already closed by commit or previous abort.
+     * @returns Promise which fulfills with void.
      */
     async abort(): Promise<void> {
         if (this._isClosed) {
@@ -57,8 +75,10 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
-     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
+     * Commits and closes child ResultStream objects.
+     * @returns Promise which fulfills with void.
+     * @throws {@linkcode TransactionClosedError} when this transaction is closed.
+     * @throws {@linkcode ClientException} when the commit digest from commit transaction result does not match.
      */
     async commit(): Promise<void> {
         if (this._isClosed) {
@@ -94,23 +114,16 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-      * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
-      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
-      *
-      * Execute the specified statement in the current transaction. This method
-      * returns a promise which eventually returns all the results loaded into
-      * memory.
-      *
-      * @param statement A statement to execute against QLDB as a string.
-      * @param parameters Variable number of arguments, where each argument
-      *                 corresponds to a placeholder (?) in the PartiQL query.
-      *                 The argument could be any native JavaScript type or an
-      *                 Ion DOM type. [Details of Ion DOM type and JavaScript
-      *                 type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
-      * @returns Promise which fulfills with all results loaded into memory
-      * @throws
-      * [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
-      * when the passed argument value cannot be converted into Ion
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which eventually returns all the results loaded into memory.
+     *
+     * @param statement A statement to execute against QLDB as a string.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with all results loaded into memory
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
     async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
@@ -119,8 +132,8 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
-     * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which fulfills with Readable Stream, which allows you to stream one record at time
      *
      * @param statement A statement to execute against QLDB as a string.
      * @param parameters Variable number of arguments, where each argument corresponds to a
@@ -137,20 +150,28 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-      * @deprecated [NOT RECOMMENDED] It is not recommended to use this method during transaction execution.
-      * Instead, please use {@linkcode QldbDriver.executeLambda} to execute the transaction.
-      *
-      * Retrieve the transaction ID associated with this transaction.
-      * @returns The transaction ID.
+     * Retrieve the transaction ID associated with this transaction.
+     * @returns The transaction ID.
      */
     getTransactionId(): string {
         return this._txnId;
     }
 
+    /**
+     * Mark the transaction as closed.
+     */
     private _internalClose(): void {
         this._isClosed = true;
     }
 
+    /**
+     * Helper method to execute statement against QLDB.
+     * @param statement A statement to execute against QLDB as a string.
+     * @param parameters An optional list of Ion values or JavaScript native types that are convertible to Ion for
+     *                   filling in parameters of the statement.
+     * @returns Promise which fulfills with a ExecuteStatementResult object.
+     * @throws {@linkcode TransactionClosedError} when transaction is closed.
+     */
     private async _sendExecute(statement: string, parameters: any[]): Promise<ExecuteStatementResult> {
         if (this._isClosed) {
             throw new TransactionClosedError();

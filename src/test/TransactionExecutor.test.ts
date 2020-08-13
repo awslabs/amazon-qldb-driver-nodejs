@@ -16,7 +16,6 @@ import "mocha";
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { dom, makeBinaryWriter, Writer } from "ion-js";
 import * as sinon from "sinon";
 
 import { LambdaAbortedError } from "../errors/Errors";
@@ -31,8 +30,6 @@ const sandbox = sinon.createSandbox();
 const testStatement: string = "SELECT * FROM foo";
 const testMessage: string = "foo";
 const testTransactionId: string = "txnId";
-const testWriter: Writer = makeBinaryWriter();
-testWriter.writeString(testMessage);
 
 const mockResult: Result = <Result><any> sandbox.mock(Result);
 const mockResultStream: ResultStream = <ResultStream><any> sandbox.mock(ResultStream);
