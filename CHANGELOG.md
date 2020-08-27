@@ -1,3 +1,8 @@
+# 2.0.0 (2020-08-27)
+
+The release candidate 1 (v2.0.0-rc.1) has been selected as a final release of v2.0.0. No new changes are introduced between v2.0.0-rc.1 and v2.0.0.
+Please check the [release notes](http://github.com/awslabs/amazon-qldb-driver-nodejs/releases/tag/v2.0.0)
+
 # 2.0.0-rc.1 (2020-08-13)
 
 ***Note: This version is a release candidate. We might introduce some additional changes before releasing v2.0.0.***
