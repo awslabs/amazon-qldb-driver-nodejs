@@ -67,7 +67,7 @@ qldbDriver.getTableNames().then(function(tableNames: string[]) {
 
 ### Setup
 
-To install the driver, run the following in the root directory of the project:
+To install the dependencies for the driver, run the following in the root directory of the project:
 
 ```npm install```
 
