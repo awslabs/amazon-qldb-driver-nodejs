@@ -42,7 +42,7 @@ chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
 const testMessage: string = "foo";
-const mockError: AWSError = <AWSError><any> sandbox.mock(AWSError);
+const mockError: AWSError = <AWSError><any> sandbox.mock(Error);
 
 describe("Errors", () => {
 
