@@ -17,19 +17,25 @@ import { dom } from "ion-js";
 import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
 import { ResultStream } from "./ResultStream";
+import { IOUsage } from "./stats/IOUsage";
+import { TimingInformation } from "./stats/TimingInformation";
 
 /**
  * A class representing a fully buffered set of results returned from QLDB.
  */
 export class Result {
     private _resultList: dom.Value[];
+    private _ioUsage: IOUsage;
+    private _timingInformation: TimingInformation;
 
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
      */
-    private constructor(resultList: dom.Value[]) {
+    private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
         this._resultList = resultList;
+        this._ioUsage = ioUsage;
+        this._timingInformation = timingInformation;
     }
 
     /**
@@ -39,9 +45,15 @@ export class Result {
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a Result.
      */
-    static async create(txnId: string, page: Page, communicator: Communicator): Promise<Result> {
-        const resultList: dom.Value[] = await Result._fetchResultPages(txnId, page, communicator);
-        return new Result(resultList);
+    static async create(
+        txnId: string,
+        page: Page,
+        ioUsage: IOUsage,
+        timingInformation: TimingInformation,
+        communicator: Communicator
+    ): Promise<Result> {
+        const resultList: dom.Value[] = await Result._fetchResultPages(txnId, page, ioUsage, timingInformation, communicator);
+        return new Result(resultList, ioUsage, timingInformation);
     }
 
     /**
@@ -51,7 +63,7 @@ export class Result {
      */
     static async bufferResultStream(resultStream: ResultStream): Promise<Result> {
         const resultList: dom.Value[] = await Result._readResultStream(resultStream);
-        return new Result(resultList);
+        return new Result(resultList, resultStream.getConsumedIOs(), resultStream.getTimingInformation());
     }
 
     /**
@@ -62,9 +74,17 @@ export class Result {
         return this._resultList.slice();
     }
 
+    getConsumedIOs(): IOUsage {
+        return this._ioUsage;
+    }
+
+    getTimingInformation(): TimingInformation {
+        return this._timingInformation;
+    }
+
     /**
      * Handle the unexpected Blob return type from QLDB.
-     * @param IonBinary The IonBinary value returned from QLDB.
+     * @param ionBinary The IonBinary value returned from QLDB.
      * @returns The IonBinary value cast explicitly to one of the types that make up the IonBinary type. This will be
      *          either Buffer, Uint8Array, or string.
      * @throws {@linkcode ClientException} when the specific type of the IonBinary value is Blob.
@@ -89,16 +109,33 @@ export class Result {
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a list of Ion values, representing all the returned values of the result set.
      */
-    private static async _fetchResultPages(txnId: string, page: Page, communicator: Communicator): Promise<dom.Value[]> {
+    private static async _fetchResultPages(
+        txnId: string,
+        page: Page,
+        ioUsage: IOUsage,
+        timingInformation: TimingInformation,
+        communicator: Communicator
+    ): Promise<dom.Value[]> {
         let currentPage: Page = page;
         const pageValuesArray: ValueHolder[][] = [];
         if (currentPage.Values && currentPage.Values.length > 0) {
             pageValuesArray.push(currentPage.Values);
         }
         while (currentPage.NextPageToken) {
-            const fetchPageResult: FetchPageResult = 
+            const fetchPageResult: FetchPageResult =
                 await communicator.fetchPage(txnId, currentPage.NextPageToken);
             currentPage = fetchPageResult.Page;
+            if (ioUsage == null && fetchPageResult.ConsumedIOs != null) {
+                ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs)
+            } else if (ioUsage != null) {
+                // ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
+                ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs + 12)
+            }
+            if (timingInformation == null && fetchPageResult.TimingInformation != null) {
+                timingInformation = new TimingInformation(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+            } else if (timingInformation != null) {
+                timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
+            }
             if (currentPage.Values && currentPage.Values.length > 0) {
                 pageValuesArray.push(currentPage.Values);
             }

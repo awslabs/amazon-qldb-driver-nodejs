@@ -20,8 +20,8 @@ import Semaphore from "semaphore-async-await";
 import { version } from "../package.json";
 import { Communicator } from "./Communicator";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
-import { 
-    DriverClosedError, 
+import {
+    DriverClosedError,
     isInvalidSessionException,
     isTransactionExpiredException,
     SessionPoolEmptyError,
@@ -72,7 +72,7 @@ export class QldbDriver {
      *                                  The maxConcurrentTransactions parameter specifies the number of sessions that the driver can hold in the pool.
      *                                  The default is set to maximum number of sockets specified in the globalAgent.
      *                                  See {@link https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html#driver.best-practices.configuring} for more details.
-     * @param RetryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retry_config
+     * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retry_config
      *                    is passed to {@linkcode executeLambda}.
      *
      * @throws RangeError if `maxConcurrentTransactions` is less than 0.
@@ -146,8 +146,8 @@ export class QldbDriver {
      * The function passed via retryIndicator parameter is invoked whenever there is a failure and the driver is about to retry the transaction.
      * The retryIndicator will be called with the current attempt number.
      *
-     * @param transactionFunction The function representing a transaction to be executed. Please see the method docs to understand the usage of this parameter.
-     * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. This config 
+     * @param transactionLambda The function representing a transaction to be executed. Please see the method docs to understand the usage of this parameter.
+     * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. This config
      *                    overrides the retry config set at driver level for a particular lambda execution.
      *                    Note that all the values of the driver level retry config will be overridden by the new config passed here.
      * @throws {@linkcode DriverClosedError} When a transaction is attempted on a closed driver instance. {@linkcode close}
@@ -171,7 +171,7 @@ export class QldbDriver {
                 return await session.executeLambda(transactionLambda, retryConfig, transactionExecutionContext);
             } catch(err) {
                 /* This is a guard condition to prevent the driver from entering an infinite loop
-                if all the sessions start resulting in InvalidSessionException 
+                if all the sessions start resulting in InvalidSessionException
                 */
                 if (transactionExecutionAttempt >= this._maxConcurrentTransactions + 3) {
                     throw err;

@@ -17,6 +17,8 @@ import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
 import { Result } from "./Result";
+import { IOUsage } from "./stats/IOUsage";
+import { TimingInformation } from "./stats/TimingInformation";
 
 /**
  * A class representing the result of a statement returned from QLDB as a stream.
@@ -30,14 +32,18 @@ export class ResultStream extends Readable {
     private _shouldPushCachedPage: boolean;
     private _retrieveIndex: number;
     private _isPushingData: boolean;
+    private _ioUsage: IOUsage;
+    private _timingInformation: TimingInformation;
 
     /**
      * Create a ResultStream.
      * @param txnId The ID of the transaction the statement was executed in.
      * @param firstPage The initial page returned from the statement execution.
+     * @param ioUsage The metrics about number of IOs.
+     * @param timingInformation Server side performance information.
      * @param communicator The Communicator used for the statement execution.
      */
-    constructor(txnId: string, firstPage: Page, communicator: Communicator) {
+    constructor(txnId: string, firstPage: Page, ioUsage: IOUsage, timingInformation: TimingInformation, communicator: Communicator) {
         super({ objectMode: true });
         this._communicator = communicator;
         this._cachedPage = firstPage;
@@ -45,6 +51,16 @@ export class ResultStream extends Readable {
         this._shouldPushCachedPage = true;
         this._retrieveIndex = 0;
         this._isPushingData = false;
+        this._ioUsage = ioUsage;
+        this._timingInformation = timingInformation;
+    }
+
+    getConsumedIOs(): IOUsage {
+        return this._ioUsage;
+    }
+
+    getTimingInformation(): TimingInformation {
+        return this._timingInformation;
     }
 
     /**
@@ -72,9 +88,20 @@ export class ResultStream extends Readable {
                 this._shouldPushCachedPage = false;
             } else if (this._cachedPage.NextPageToken) {
                 try {
-                    const fetchPageResult: FetchPageResult = 
+                    const fetchPageResult: FetchPageResult =
                         await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
                     this._cachedPage = fetchPageResult.Page;
+                    if (this._ioUsage == null && fetchPageResult.ConsumedIOs != null) {
+                        this._ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs)
+                    } else if (this._ioUsage != null) {
+                        this._ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
+                    }
+                    if (this._timingInformation == null && fetchPageResult.TimingInformation != null) {
+                        this._timingInformation =
+                            new TimingInformation(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+                    } else if (this._timingInformation != null) {
+                        this._timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
+                    }
                     this._retrieveIndex = 0;
                 } catch (e) {
                     this.destroy(e);

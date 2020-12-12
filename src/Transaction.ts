@@ -11,7 +11,7 @@
  * and limitations under the License.
  */
 
-import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
+import { CommitTransactionResult, ExecuteStatementResult, IOUsage as ConsumedIOs, TimingInformation as TimingInfo, ValueHolder } from "aws-sdk/clients/qldbsession";
 import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
 import { Readable } from "stream";
@@ -22,6 +22,8 @@ import { warn } from "./LogUtil";
 import { QldbHash } from "./QldbHash";
 import { Result } from "./Result";
 import { ResultStream } from "./ResultStream";
+import { IOUsage } from "./stats/IOUsage";
+import { TimingInformation } from "./stats/TimingInformation";
 import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
@@ -127,8 +129,9 @@ export class Transaction implements TransactionExecutable {
      */
     async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        const inlineResult = Result.create(this._txnId, result.FirstPage, this._communicator);
-        return inlineResult;
+        const ioUsage: IOUsage = this._getIOUsage(result.ConsumedIOs);
+        const timingInfo: TimingInformation = this._getTimingInformation(result.TimingInformation);
+        return  Result.create(this._txnId, result.FirstPage, ioUsage, timingInfo, this._communicator);
     }
 
     /**
@@ -146,7 +149,9 @@ export class Transaction implements TransactionExecutable {
      */
     async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        return new ResultStream(this._txnId, result.FirstPage, this._communicator);
+        const ioUsage: IOUsage = this._getIOUsage(result.ConsumedIOs);
+        const timingInfo: TimingInformation = this._getTimingInformation(result.TimingInformation);
+        return new ResultStream(this._txnId, result.FirstPage, ioUsage, timingInfo, this._communicator);
     }
 
     /**
@@ -207,5 +212,21 @@ export class Transaction implements TransactionExecutable {
         } finally {
             this._hashLock.release();
         }
+    }
+
+    private _getIOUsage(consumedIOs: ConsumedIOs): IOUsage {
+        let ioUsage: IOUsage;
+        if (consumedIOs != null) {
+            ioUsage = new IOUsage(consumedIOs.ReadIOs);
+        }
+        return ioUsage;
+    }
+
+    private _getTimingInformation(timingInfo: TimingInfo): TimingInformation {
+        let timingInformation: TimingInformation;
+        if (timingInfo != null) {
+            timingInformation = new TimingInformation(timingInfo.ProcessingTimeMilliseconds);
+        }
+        return timingInformation;
     }
 }
