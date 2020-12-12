@@ -1,3 +1,13 @@
+# 2.1.0
+Add support for obtaining basic server-side statistics on individual statement executions.
+
+## :tada: Enhancements
+* Added `IOUsage` and `TimingInformation` interface to provide server-side execution statistics
+   * IOUsage provides `getReadIOs(): number`
+   * TimingInformation provides `getProcessingTimeMilliseconds(): number`
+   * Added `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` to the `Result` and `ResultStream`
+   * `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` methods are stateful, meaning the statistics returned by them reflect the state at the time of method execution
+
 # 2.0.0 (2020-08-27)
 
 The release candidate 1 (v2.0.0-rc.1) has been selected as a final release of v2.0.0. No new changes are introduced between v2.0.0-rc.1 and v2.0.0.

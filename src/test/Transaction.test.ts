@@ -17,7 +17,6 @@ import "mocha";
 import {
     CommitTransactionResult,
     ExecuteStatementResult,
-    Page,
     PageToken,
     ValueHolder
 } from "aws-sdk/clients/qldbsession";
@@ -50,7 +49,6 @@ const testCommitTransactionResult: CommitTransactionResult = {
     TransactionId: testTransactionId,
     CommitDigest: QldbHash.toQldbHash(testTransactionId).getQldbHash()
 };
-const pageToken: Page = {NextPageToken: testPageToken};
 const testExecuteStatementResult: ExecuteStatementResult = {
     FirstPage: {
         NextPageToken: testPageToken
@@ -271,7 +269,7 @@ describe("Transaction", () => {
         it("should return a Stream object when provided with a statement", async () => {
             const sampleResultStreamObject: ResultStream = new ResultStream(
                 testTransactionId,
-                pageToken,
+                testExecuteStatementResult,
                 mockCommunicator
             );
             const executeSpy = sandbox.spy(mockCommunicator, "executeStatement");
@@ -284,7 +282,7 @@ describe("Transaction", () => {
         it("should return a Stream object when provided with a statement and parameters", async () => {
             const sampleResultStreamObject: ResultStream = new ResultStream(
                 testTransactionId,
-                pageToken,
+                testExecuteStatementResult,
                 mockCommunicator
             );
             const sendExecuteSpy = sandbox.spy(transaction as any, "_sendExecute");
