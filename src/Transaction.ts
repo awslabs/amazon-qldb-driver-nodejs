@@ -127,8 +127,7 @@ export class Transaction implements TransactionExecutable {
      */
     async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        const inlineResult = Result.create(this._txnId, result.FirstPage, this._communicator);
-        return inlineResult;
+        return Result.create(this._txnId, result, this._communicator);
     }
 
     /**
@@ -146,7 +145,7 @@ export class Transaction implements TransactionExecutable {
      */
     async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        return new ResultStream(this._txnId, result.FirstPage, this._communicator);
+        return new ResultStream(this._txnId, result, this._communicator);
     }
 
     /**

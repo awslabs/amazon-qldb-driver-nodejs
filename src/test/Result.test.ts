@@ -14,17 +14,25 @@
 // Test environment imports
 import "mocha";
 
-import { IonBinary, Page, ValueHolder} from "aws-sdk/clients/qldbsession";
+import {
+    ExecuteStatementResult,
+    IonBinary,
+    IOUsage as sdkIOUsage,
+    Page,
+    TimingInformation as sdkTimingInformation,
+    ValueHolder
+} from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom, IonType, IonTypes} from "ion-js";
 import * as sinon from "sinon";
-import { Readable } from "stream";
 
 import { Communicator } from "../Communicator";
 import { ClientException } from "../errors/Errors";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
+import { IOUsage } from "../stats/IOUsage";
+import { TimingInformation } from "../stats/TimingInformation";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -41,6 +49,20 @@ const testPageWithToken: Page = {
     Values: testValueHolder,
     NextPageToken: testNextPageToken
 };
+const timingInformation: sdkTimingInformation = { ProcessingTimeMilliseconds: 20 };
+const consumedIOs: sdkIOUsage = { ReadIOs: 5 };
+const testExecuteResultWithNextPage: ExecuteStatementResult = {
+    FirstPage: testPageWithToken,
+    TimingInformation: timingInformation,
+    ConsumedIOs: consumedIOs
+};
+const testExecuteResult: ExecuteStatementResult = {
+    FirstPage: testPage,
+    TimingInformation: timingInformation,
+    ConsumedIOs: consumedIOs
+};
+const testIOUsage: IOUsage = new IOUsage(5);
+const testTimingInfo: TimingInformation = new TimingInformation(20);
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 
@@ -52,7 +74,7 @@ describe("Result", () => {
 
     describe("#create()", () => {
         it("should return a Result object when called", async () => {
-            const result = await Result.create(testTransactionId, testPage, mockCommunicator);
+            const result = await Result.create(testTransactionId, testExecuteResult, mockCommunicator);
             chai.expect(result).to.be.an.instanceOf(Result);
         });
 
@@ -60,7 +82,7 @@ describe("Result", () => {
             mockCommunicator.fetchPage = async () => {
                 throw new Error(testMessage);
             };
-            await chai.expect(Result.create(testTransactionId, testPageWithToken, mockCommunicator)).to.be.rejected;
+            await chai.expect(Result.create(testTransactionId, testExecuteResultWithNextPage, mockCommunicator)).to.be.rejected;
         });
     });
 
@@ -68,7 +90,7 @@ describe("Result", () => {
         it("should return a Result object when called", async () => {
             const sampleResultStreamObject: ResultStream = new ResultStream(
                 testTransactionId,
-                testPage,
+                testExecuteResult,
                 mockCommunicator
             );
             const result = await Result.bufferResultStream(sampleResultStreamObject);
@@ -90,7 +112,7 @@ describe("Result", () => {
                     Page: finalTestPage
                 };
             };
-            const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
+            const result: Result = await Result.create(testTransactionId, testExecuteResultWithNextPage, mockCommunicator);
             const resultList: dom.Value[] = result.getResultList();
 
             resultList.forEach((result, i) => {
@@ -116,7 +138,7 @@ describe("Result", () => {
                 IonTypes.SEXP,
                 IonTypes.LIST,
                 IonTypes.STRUCT
-            ]
+            ];
             const nullValue: ValueHolder = {IonBinary: "null"};
             const bool: ValueHolder = {IonBinary: "true"};
             const int: ValueHolder = {IonBinary: "5"};
@@ -152,7 +174,10 @@ describe("Result", () => {
                     Page: finalTestPage
                 };
             };
-            const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithToken,
+            };
+            const result: Result = await Result.create(testTransactionId, testExecuteStatementResult, mockCommunicator);
             const resultList: dom.Value[] = result.getResultList();
 
             resultList.forEach((result, i) => {
@@ -172,7 +197,7 @@ describe("Result", () => {
                     Page: finalTestPage
                 };
             };
-            const result: Result = await Result.create(testTransactionId, testPageWithToken, mockCommunicator);
+            const result: Result = await Result.create(testTransactionId, testExecuteResultWithNextPage, mockCommunicator);
             const value: dom.Value = result.getResultList()[0];
 
             chai.assert.equal(value.getType(), IonTypes.STRUCT);
@@ -198,13 +223,16 @@ describe("Result", () => {
                 Values: testValueHolder,
                 NextPageToken: testNextPageToken
             };
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithTokenAndValue,
+            };
 
             mockCommunicator.fetchPage = async () => {
                 return {
                     Page: finalTestPage
                 };
             };
-            const result: Result = await Result.create(testTransactionId, testPageWithTokenAndValue, mockCommunicator);
+            const result: Result = await Result.create(testTransactionId, testExecuteStatementResult, mockCommunicator);
             const resultList: dom.Value[] = result.getResultList();
 
             chai.assert.equal(allValues.length + testValueHolder.length, resultList.length);
@@ -234,30 +262,199 @@ describe("Result", () => {
                 dom.load(Result._handleBlob(value3.IonBinary)),
                 dom.load(Result._handleBlob(value4.IonBinary))
             ];
-            let eventCount: number = 0;
-            const mockResultStream: Readable = new Readable({
-                objectMode: true,
-                read: function(size) {
-                    if (eventCount < values.length) {
-                        eventCount += 1;
-                        return this.push(values[eventCount-1]);
-                    } else {
-                        return this.push(null);
-                    }
-                }
-            });
+            const allValues: ValueHolder[] = [value1, value2, value3, value4];
+            const testPage: Page = {Values: allValues};
+
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: testPage
+                };
+            };
+            const testExecuteResult: ExecuteStatementResult = {
+                FirstPage: testPage,
+            };
+            const mockResultStream: ResultStream = new ResultStream(testTransactionId, testExecuteResult, mockCommunicator);
 
             const result: Result = await Result.bufferResultStream(<ResultStream> mockResultStream);
             const resultList: dom.Value[] = result.getResultList();
 
             chai.assert.equal(values.length, resultList.length);
             resultList.forEach((result, i) => {
-                chai.assert.equal(
+                chai.assert.deepEqual(
                     result,
                     values[i]
                 );
             });
         });
+    });
+
+    describe("#getConsumedIOs", () => {
+       it("should return an IOUsage object with correct value when called without IO requests on next page", async () => {
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: null
+               };
+           };
+
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+
+           const ioUsage: IOUsage = result.getConsumedIOs();
+           chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
+           chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
+       });
+
+       it("should return null if there are no IOs", async () => {
+            const testExecuteResult: ExecuteStatementResult = {
+                FirstPage: testPage,
+                ConsumedIOs: null
+            };
+
+            const result: Result = await Result.create(
+                testTransactionId,
+                testExecuteResult,
+                mockCommunicator
+            );
+
+            chai.expect(result.getConsumedIOs()).to.be.null;
+        });
+
+       it("should return accumulated number of IOs of the first page and next pages", async () => {
+           const nextPageConsumedIOs: sdkIOUsage = {
+               ReadIOs: 2
+           };
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   ConsumedIOs: nextPageConsumedIOs
+               };
+           };
+           const expectedAccumulatedIOs: number = testIOUsage.getReadIOs() + nextPageConsumedIOs.ReadIOs;
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+           const ioUsage: IOUsage = result.getConsumedIOs();
+           chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
+           chai.expect(ioUsage.getReadIOs()).to.be.eq(expectedAccumulatedIOs);
+       });
+
+       it("should return correct number of IOs if first page's IOs is null but next pages have IOs", async () => {
+           const testExecuteResultWithNextPage: ExecuteStatementResult = {
+               FirstPage: testPageWithToken,
+               ConsumedIOs: null
+           };
+
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+           const nextPageConsumedIOs: sdkIOUsage = {
+               ReadIOs: 2
+           };
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   ConsumedIOs: nextPageConsumedIOs
+               };
+           };
+
+           const ioUsage: IOUsage = result.getConsumedIOs();
+           chai.expect(ioUsage.getReadIOs()).to.be.eq(nextPageConsumedIOs.ReadIOs);
+       });
+    });
+
+    describe("#getTimingInformation", () => {
+       it("should return an TimeInformation object with correct value when called without TimingInformation on next page", async () => {
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: null
+               };
+           };
+
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+
+           const timingInformation: TimingInformation = result.getTimingInformation();
+           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
+           chai.expect(timingInformation.getProcessingTimeMilliseconds())
+               .to.be.eq(testTimingInfo.getProcessingTimeMilliseconds());
+       });
+
+       it("should return null if there are is no processing time", async () => {
+            const testExecuteResult: ExecuteStatementResult = {
+                FirstPage: testPage,
+                TimingInformation: null
+            };
+
+            const result: Result = await Result.create(
+                testTransactionId,
+                testExecuteResult,
+                mockCommunicator
+            );
+
+            chai.expect(result.getTimingInformation()).to.be.null;
+        });
+
+       it("should return accumulated processing time of the first page and next pages", async () => {
+           const nextTimingInfo: sdkTimingInformation = {
+               ProcessingTimeMilliseconds: 10
+           };
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: nextTimingInfo
+               };
+           };
+           const expectedAccumulatedTime: number = testTimingInfo.getProcessingTimeMilliseconds()
+               + nextTimingInfo.ProcessingTimeMilliseconds;
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+           const timingInformation: TimingInformation = result.getTimingInformation();
+           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
+           chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.eq(expectedAccumulatedTime);
+       });
+
+       it("should return correct number of IOs if first page's IOs is null but next pages have IOs", async () => {
+           const testExecuteResultWithNextPage: ExecuteStatementResult = {
+               FirstPage: testPageWithToken,
+               TimingInformation: null
+           };
+
+           const result: Result = await Result.create(
+               testTransactionId,
+               testExecuteResultWithNextPage,
+               mockCommunicator
+           );
+           const nextPageTimingInfo: sdkTimingInformation = {
+               ProcessingTimeMilliseconds: 10
+           };
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: {
+                       ProcessingTimeMilliseconds: 10
+                   }
+               };
+           };
+
+           const timingInformation: TimingInformation = result.getTimingInformation();
+           chai.expect(timingInformation.getProcessingTimeMilliseconds())
+               .to.be.eq(nextPageTimingInfo.ProcessingTimeMilliseconds);
+       });
     });
 
     describe("#_handleBlob()", () => {
@@ -283,4 +480,5 @@ describe("Result", () => {
             }).to.throw(ClientException);
         });
     });
+
 });

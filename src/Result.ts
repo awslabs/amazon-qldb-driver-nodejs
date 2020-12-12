@@ -11,37 +11,55 @@
  * and limitations under the License.
  */
 
-import { IonBinary, FetchPageResult, Page, ValueHolder } from "aws-sdk/clients/qldbsession";
+import {
+    ExecuteStatementResult,
+    FetchPageResult,
+    IonBinary,
+    Page,
+    ValueHolder
+} from "aws-sdk/clients/qldbsession";
 import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
 import { ResultStream } from "./ResultStream";
+import { IOUsage } from "./stats/IOUsage";
+import { TimingInformation } from "./stats/TimingInformation";
 
 /**
  * A class representing a fully buffered set of results returned from QLDB.
  */
 export class Result {
     private _resultList: dom.Value[];
+    private _ioUsage: IOUsage;
+    private _timingInformation: TimingInformation;
 
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
+     * @param ioUsage Contains the number of consumed IO requests for the executed statement.
+     * @param timingInformation Holds server side processing time for the executed statement.
      */
-    private constructor(resultList: dom.Value[]) {
+    private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
         this._resultList = resultList;
+        this._ioUsage = ioUsage;
+        this._timingInformation = timingInformation;
     }
 
     /**
      * Static factory method that creates a Result object, containing the results of a statement execution from QLDB.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param page The initial page returned from the statement execution.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a Result.
      */
-    static async create(txnId: string, page: Page, communicator: Communicator): Promise<Result> {
-        const resultList: dom.Value[] = await Result._fetchResultPages(txnId, page, communicator);
-        return new Result(resultList);
+    static async create(
+        txnId: string,
+        executeResult: ExecuteStatementResult,
+        communicator: Communicator
+    ): Promise<Result> {
+        const result: Result = await Result._fetchResultPages(txnId, executeResult, communicator);
+        return result;
     }
 
     /**
@@ -51,7 +69,7 @@ export class Result {
      */
     static async bufferResultStream(resultStream: ResultStream): Promise<Result> {
         const resultList: dom.Value[] = await Result._readResultStream(resultStream);
-        return new Result(resultList);
+        return new Result(resultList, resultStream.getConsumedIOs(), resultStream.getTimingInformation());
     }
 
     /**
@@ -63,8 +81,24 @@ export class Result {
     }
 
     /**
+     * Returns the number of read IO request for the executed statement.
+     * @returns IOUsage, containing number of read IOs.
+     */
+    getConsumedIOs(): IOUsage {
+        return this._ioUsage;
+    }
+
+    /**
+     * Returns server-side processing time for the executed statement.
+     * @returns TimingInformation, containing processing time.
+     */
+    getTimingInformation(): TimingInformation {
+        return this._timingInformation;
+    }
+
+    /**
      * Handle the unexpected Blob return type from QLDB.
-     * @param IonBinary The IonBinary value returned from QLDB.
+     * @param ionBinary The IonBinary value returned from QLDB.
      * @returns The IonBinary value cast explicitly to one of the types that make up the IonBinary type. This will be
      *          either Buffer, Uint8Array, or string.
      * @throws {@linkcode ClientException} when the specific type of the IonBinary value is Blob.
@@ -85,22 +119,39 @@ export class Result {
     /**
      * Fetches all subsequent Pages given an initial Page, places each value of each Page in an Ion value.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param page The initial page returned from the statement execution.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
-     * @returns Promise which fulfills with a list of Ion values, representing all the returned values of the result set.
+     * @returns Promise which fulfills with a Result, containing a list of Ion values, representing all the returned
+     * values of the result set, number of IOs for the request, and the time spent processing the request.
      */
-    private static async _fetchResultPages(txnId: string, page: Page, communicator: Communicator): Promise<dom.Value[]> {
-        let currentPage: Page = page;
+    private static async _fetchResultPages(
+        txnId: string,
+        executeResult: ExecuteStatementResult,
+        communicator: Communicator
+    ): Promise<Result> {
+        let currentPage: Page = executeResult.FirstPage;
+        let readIO: number = executeResult.ConsumedIOs != null ? executeResult.ConsumedIOs.ReadIOs : null;
+        let processingTime: number =
+            executeResult.TimingInformation != null ? executeResult.TimingInformation.ProcessingTimeMilliseconds : null;
+
         const pageValuesArray: ValueHolder[][] = [];
         if (currentPage.Values && currentPage.Values.length > 0) {
             pageValuesArray.push(currentPage.Values);
         }
         while (currentPage.NextPageToken) {
-            const fetchPageResult: FetchPageResult = 
+            const fetchPageResult: FetchPageResult =
                 await communicator.fetchPage(txnId, currentPage.NextPageToken);
             currentPage = fetchPageResult.Page;
             if (currentPage.Values && currentPage.Values.length > 0) {
                 pageValuesArray.push(currentPage.Values);
+            }
+
+            if (fetchPageResult.ConsumedIOs != null) {
+                readIO += fetchPageResult.ConsumedIOs.ReadIOs;
+            }
+
+            if (fetchPageResult.TimingInformation != null) {
+                processingTime += fetchPageResult.TimingInformation.ProcessingTimeMilliseconds;
             }
         }
         const ionValues: dom.Value[] = [];
@@ -109,7 +160,9 @@ export class Result {
                 ionValues.push(dom.load(Result._handleBlob(valueHolder.IonBinary)));
             });
         });
-        return ionValues;
+        const ioUsage: IOUsage = readIO != null ? new IOUsage(readIO) : null;
+        const timingInformation = processingTime != null ? new TimingInformation(processingTime) : null;
+        return new Result(ionValues, ioUsage, timingInformation);
     }
 
     /**

@@ -11,12 +11,18 @@
  * and limitations under the License.
  */
 
-import { FetchPageResult, Page } from "aws-sdk/clients/qldbsession";
+import {
+    ExecuteStatementResult,
+    FetchPageResult,
+    Page,
+} from "aws-sdk/clients/qldbsession";
 import { dom } from "ion-js";
 import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
 import { Result } from "./Result";
+import { IOUsage } from "./stats/IOUsage";
+import { TimingInformation } from "./stats/TimingInformation";
 
 /**
  * A class representing the result of a statement returned from QLDB as a stream.
@@ -30,21 +36,46 @@ export class ResultStream extends Readable {
     private _shouldPushCachedPage: boolean;
     private _retrieveIndex: number;
     private _isPushingData: boolean;
+    private _readIOs: number;
+    private _processingTime: number;
 
     /**
      * Create a ResultStream.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param firstPage The initial page returned from the statement execution.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      */
-    constructor(txnId: string, firstPage: Page, communicator: Communicator) {
+    constructor(txnId: string, executeResult: ExecuteStatementResult, communicator: Communicator) {
         super({ objectMode: true });
         this._communicator = communicator;
-        this._cachedPage = firstPage;
+        this._cachedPage = executeResult.FirstPage;
         this._txnId = txnId;
         this._shouldPushCachedPage = true;
         this._retrieveIndex = 0;
         this._isPushingData = false;
+        this._readIOs = executeResult.ConsumedIOs == null ? null : executeResult.ConsumedIOs.ReadIOs;
+        this._processingTime =
+            executeResult.TimingInformation == null ? null : executeResult.TimingInformation.ProcessingTimeMilliseconds;
+    }
+
+    /**
+     * Returns the number of read IO request for the executed statement. The statistics are stateful.
+     * @returns IOUsage, containing number of read IOs.
+     */
+    getConsumedIOs(): IOUsage {
+        return this._readIOs == null
+            ? null
+            : new IOUsage(this._readIOs);
+    }
+
+    /**
+     * Returns server-side processing time for the executed statement. The statistics are stateful
+     * @returns TimingInformation, containing processing time.
+     */
+    getTimingInformation(): TimingInformation {
+        return this._processingTime == null
+            ? null
+            : new TimingInformation(this._processingTime);
     }
 
     /**
@@ -72,9 +103,18 @@ export class ResultStream extends Readable {
                 this._shouldPushCachedPage = false;
             } else if (this._cachedPage.NextPageToken) {
                 try {
-                    const fetchPageResult: FetchPageResult = 
+                    const fetchPageResult: FetchPageResult =
                         await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
                     this._cachedPage = fetchPageResult.Page;
+
+                    if (fetchPageResult.ConsumedIOs != null) {
+                        this._readIOs += fetchPageResult.ConsumedIOs.ReadIOs;
+                     }
+
+                    if (fetchPageResult.TimingInformation != null) {
+                        this._processingTime += fetchPageResult.TimingInformation.ProcessingTimeMilliseconds;
+                    }
+
                     this._retrieveIndex = 0;
                 } catch (e) {
                     this.destroy(e);
