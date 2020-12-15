@@ -20,6 +20,7 @@ import { isOccConflictException } from "../errors/Errors";
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
 import { RetryConfig } from "../retry/RetryConfig";
+import { IOUsage } from "../stats/IOUsage";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
@@ -221,6 +222,28 @@ describe("StatementExecution", function() {
         });
 
         chai.assert.equal(searchCount, 0);
+    });
+
+    it("Can return metrics for consumed IOs", async () => {
+        const struct1: Record<string, string> = {
+            [constants.COLUMN_NAME]: constants.MULTI_DOC_VALUE_1
+        };
+        const struct2: Record<string, string> = {
+            [constants.COLUMN_NAME]: constants.MULTI_DOC_VALUE_2
+        };
+        const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} <<?,?>>`;
+        let ioUsage: IOUsage = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return (await txn.execute(insertStatement, struct1, struct2)).getConsumedIOs();
+        });
+        chai.assert.equal(ioUsage.getReadIOs(), 0);
+
+        const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
+            ` WHERE ${constants.COLUMN_NAME} IS NULL`;
+        ioUsage = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return (await txn.execute(searchQuery)).getConsumedIOs();
+        });
+        chai.assert.equal(ioUsage.getReadIOs(), 2);
+
     });
 
     it("Can delete all documents", async () => {
