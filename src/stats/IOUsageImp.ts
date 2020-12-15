@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -11,7 +11,7 @@
  * and limitations under the License.
  */
 
-import { IOUsage as ConsumedIOs } from "aws-sdk/clients/qldbsession";
+import { IOUsage as sdkIOUsage } from "aws-sdk/clients/qldbsession";
 
 import { IOUsage } from "./IOUsage";
 
@@ -42,7 +42,7 @@ export class IOUsageImp implements IOUsage {
      * Accumulates the number of IOs to the current instance, for stateful cases.
      * @param consumedIOs Server-side object, containing consumed IOs to be added to the current number of IOs.
      */
-    accumulateIOUsage(consumedIOs: ConsumedIOs) {
+    accumulateIOUsage(consumedIOs: sdkIOUsage) {
         if (consumedIOs != null) {
             this._setReadIOs(this.getReadIOs() + consumedIOs.ReadIOs);
         }

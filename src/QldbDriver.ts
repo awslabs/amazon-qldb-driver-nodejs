@@ -72,7 +72,7 @@ export class QldbDriver {
      *                                  The maxConcurrentTransactions parameter specifies the number of sessions that the driver can hold in the pool.
      *                                  The default is set to maximum number of sockets specified in the globalAgent.
      *                                  See {@link https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html#driver.best-practices.configuring} for more details.
-     * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retry_config
+     * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retryConfig
      *                    is passed to {@linkcode executeLambda}.
      *
      * @throws RangeError if `maxConcurrentTransactions` is less than 0.

@@ -103,17 +103,20 @@ export class ResultStream extends Readable {
                     const fetchPageResult: FetchPageResult =
                         await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
                     this._cachedPage = fetchPageResult.Page;
+
                     if (this._ioUsage == null && fetchPageResult.ConsumedIOs != null) {
                         this._ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
                     } else if (this._ioUsage != null) {
                         (<IOUsageImp>this._ioUsage).accumulateIOUsage(fetchPageResult.ConsumedIOs);
                     }
+
                     if (this._timingInformation == null && fetchPageResult.TimingInformation != null) {
                         this._timingInformation =
                             new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
                     } else if (this._timingInformation != null) {
                         (<TimingInformationImp>this._timingInformation).accumulateTimingInfo(fetchPageResult.TimingInformation);
                     }
+
                     this._retrieveIndex = 0;
                 } catch (e) {
                     this.destroy(e);

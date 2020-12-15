@@ -16,9 +16,9 @@ import "mocha";
 
 import {
     ExecuteStatementResult,
-    IOUsage as ConsumedIOs,
+    IOUsage as sdkIOUsage,
     Page,
-    TimingInformation as TimingInfo,
+    TimingInformation as sdkTimingInformation,
     ValueHolder
 } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
@@ -301,7 +301,15 @@ describe("ResultStream", () => {
     });
 
     describe("#getConsumedIOs", () => {
-        it("should return an IOUsage object with correct value without next page in result", async () => {
+        it("should return an IOUsage object with correct value without IO on next page in result", async () => {
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: testPage,
+                    ConsumedIOs: null
+                };
+            };
+            await resultStream["_pushPageValues"]();
+
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
             chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
@@ -328,7 +336,7 @@ describe("ResultStream", () => {
         });
 
         it("should return accumulated number of IOs of the first page and next pages", async () => {
-            const nextPageConsumedIOs: ConsumedIOs = {
+            const nextPageConsumedIOs: sdkIOUsage = {
                 ReadIOs: 2
             };
             mockCommunicator.fetchPage = async () => {
@@ -361,7 +369,7 @@ describe("ResultStream", () => {
                 testExecuteStatementResult,
                 mockCommunicator
             );
-            const nextPageConsumedIOs: ConsumedIOs = {
+            const nextPageConsumedIOs: sdkIOUsage = {
                 ReadIOs: 2
             };
             mockCommunicator.fetchPage = async () => {
@@ -385,7 +393,15 @@ describe("ResultStream", () => {
     });
 
     describe("#getTimingInformation", () => {
-        it("should return a TimingInformation object when called without next page", async () => {
+        it("should return a TimingInformation object when called without TimingInformation on next page", async () => {
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: testPage,
+                    TimingInformation: null
+                };
+            };
+            await resultStream["_pushPageValues"]();
+
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
             chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
             chai.expect(timingInformation.getProcessingTimeMilliseconds())
@@ -413,7 +429,7 @@ describe("ResultStream", () => {
         });
 
         it("should return accumulated processing time for the first page and next pages", async () => {
-            const nextPageProcessingTime: TimingInfo = {
+            const nextPageProcessingTime: sdkTimingInformation = {
                 ProcessingTimeMilliseconds: 10
             };
             mockCommunicator.fetchPage = async () => {
@@ -447,7 +463,7 @@ describe("ResultStream", () => {
                 testExecuteStatementResult,
                 mockCommunicator
             );
-            const nextPageProcessingTime: TimingInfo = {
+            const nextPageProcessingTime: sdkTimingInformation = {
                 ProcessingTimeMilliseconds: 10
             };
             mockCommunicator.fetchPage = async () => {

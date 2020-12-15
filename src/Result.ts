@@ -15,9 +15,9 @@ import {
     ExecuteStatementResult,
     FetchPageResult,
     IonBinary,
-    IOUsage as ConsumedIOs,
+    IOUsage as sdkIOUsage,
     Page,
-    TimingInformation as TimingInfo,
+    TimingInformation as sdkTimingInformation,
     ValueHolder
 } from "aws-sdk/clients/qldbsession";
 import { dom } from "ion-js";
@@ -41,8 +41,8 @@ export class Result {
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
-     * @param ioUsage IOUsage object, containing the number of consumed IOs for the executed statement.
-     * @param timingInformation Holds processing time for the excuted statement.
+     * @param ioUsage IOUsage object, containing the number of consumed IO requests for the executed statement.
+     * @param timingInformation Holds server side processing time for the executed statement.
      */
     private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
         this._resultList = resultList;
@@ -144,18 +144,20 @@ export class Result {
             const fetchPageResult: FetchPageResult =
                 await communicator.fetchPage(txnId, currentPage.NextPageToken);
             currentPage = fetchPageResult.Page;
+            if (currentPage.Values && currentPage.Values.length > 0) {
+                pageValuesArray.push(currentPage.Values);
+            }
+
             if (ioUsage == null && fetchPageResult.ConsumedIOs != null) {
                 ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
             } else if (ioUsage != null) {
                 ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
             }
+
             if (timingInformation == null && fetchPageResult.TimingInformation != null) {
                 timingInformation = new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
             } else if (timingInformation != null) {
                 timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
-            }
-            if (currentPage.Values && currentPage.Values.length > 0) {
-                pageValuesArray.push(currentPage.Values);
             }
         }
         const ionValues: dom.Value[] = [];
@@ -188,7 +190,7 @@ export class Result {
      * @param consumedIOs The server-side ConsumedIOs
      * @returns An instance of IOUsage
      */
-    static _getIOUsage(consumedIOs: ConsumedIOs): IOUsage {
+    static _getIOUsage(consumedIOs: sdkIOUsage): IOUsage {
         if (consumedIOs == null) {
             return null;
         }
@@ -200,7 +202,7 @@ export class Result {
      * @param timingInfo The server-side processing time information.
      * @returns An instance of TimingInformation
      */
-    static _getTimingInformation(timingInfo: TimingInfo): TimingInformation {
+    static _getTimingInformation(timingInfo: sdkTimingInformation): TimingInformation {
         if (timingInfo == null) {
             return null;
         }

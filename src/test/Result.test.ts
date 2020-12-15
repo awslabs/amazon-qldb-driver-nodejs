@@ -17,9 +17,9 @@ import "mocha";
 import {
     ExecuteStatementResult,
     IonBinary,
-    IOUsage as ConsumedIOs,
+    IOUsage as sdkIOUsage,
     Page,
-    TimingInformation as TimingInfo,
+    TimingInformation as sdkTimingInformation,
     ValueHolder
 } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
@@ -51,8 +51,8 @@ const testPageWithToken: Page = {
     Values: testValueHolder,
     NextPageToken: testNextPageToken
 };
-const timingInformation: TimingInfo = { ProcessingTimeMilliseconds: 20 };
-const consumedIOs: ConsumedIOs = { ReadIOs: 5 };
+const timingInformation: sdkTimingInformation = { ProcessingTimeMilliseconds: 20 };
+const consumedIOs: sdkIOUsage = { ReadIOs: 5 };
 const testExecuteResultWithNextPage: ExecuteStatementResult = {
     FirstPage: testPageWithToken,
     TimingInformation: timingInformation,
@@ -291,18 +291,26 @@ describe("Result", () => {
     });
 
     describe("#getConsumedIOs", () => {
-       it("should return an IOUsage object with correct value when called without next page", async () => {
+       it("should return an IOUsage object with correct value when called without IO requests on next page", async () => {
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: null
+               };
+           };
+
            const result: Result = await Result.create(
                testTransactionId,
-               testExecuteResult,
+               testExecuteResultWithNextPage,
                mockCommunicator
            );
+
            const ioUsage: IOUsage = result.getConsumedIOs();
            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
            chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
        });
 
-        it("should return null if there are no IOs", async () => {
+       it("should return null if there are no IOs", async () => {
             const testExecuteResult: ExecuteStatementResult = {
                 FirstPage: testPage,
                 ConsumedIOs: null
@@ -318,7 +326,7 @@ describe("Result", () => {
         });
 
        it("should return accumulated number of IOs of the first page and next pages", async () => {
-           const nextPageConsumedIOs: ConsumedIOs = {
+           const nextPageConsumedIOs: sdkIOUsage = {
                ReadIOs: 2
            };
            mockCommunicator.fetchPage = async () => {
@@ -349,7 +357,7 @@ describe("Result", () => {
                testExecuteResultWithNextPage,
                mockCommunicator
            );
-           const nextPageConsumedIOs: ConsumedIOs = {
+           const nextPageConsumedIOs: sdkIOUsage = {
                ReadIOs: 2
            };
            mockCommunicator.fetchPage = async () => {
@@ -365,12 +373,20 @@ describe("Result", () => {
     });
 
     describe("#getTimingInformation", () => {
-       it("should return an TimeInformation object with correct value when called without next page", async () => {
+       it("should return an TimeInformation object with correct value when called without TimingInformation on next page", async () => {
+           mockCommunicator.fetchPage = async () => {
+               return {
+                   Page: testPage,
+                   TimingInformation: null
+               };
+           };
+
            const result: Result = await Result.create(
                testTransactionId,
-               testExecuteResult,
+               testExecuteResultWithNextPage,
                mockCommunicator
            );
+
            const timingInformation: TimingInformation = result.getTimingInformation();
            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
            chai.expect(timingInformation.getProcessingTimeMilliseconds())
@@ -393,7 +409,7 @@ describe("Result", () => {
         });
 
        it("should return accumulated processing time of the first page and next pages", async () => {
-           const nextTimingInfo: TimingInfo = {
+           const nextTimingInfo: sdkTimingInformation = {
                ProcessingTimeMilliseconds: 10
            };
            mockCommunicator.fetchPage = async () => {
@@ -425,7 +441,7 @@ describe("Result", () => {
                testExecuteResultWithNextPage,
                mockCommunicator
            );
-           const nextPageTimingInfo: TimingInfo = {
+           const nextPageTimingInfo: sdkTimingInformation = {
                ProcessingTimeMilliseconds: 10
            };
            mockCommunicator.fetchPage = async () => {
@@ -473,7 +489,7 @@ describe("Result", () => {
         });
 
         it("should return null when there is no IOUsage", async () => {
-            const consumedIOs: ConsumedIOs = testExecuteResult.ConsumedIOs;
+            const consumedIOs: sdkIOUsage = testExecuteResult.ConsumedIOs;
 
             const ioUsage = Result["_getIOUsage"](consumedIOs);
 
@@ -488,7 +504,7 @@ describe("Result", () => {
         });
 
         it("should return null when there is no TimingInformation", async () => {
-            const timingInfo: TimingInfo = testExecuteResult.TimingInformation;
+            const timingInfo: sdkTimingInformation = testExecuteResult.TimingInformation;
 
             const timingInformation = Result["_getTimingInformation"](timingInfo);
 
