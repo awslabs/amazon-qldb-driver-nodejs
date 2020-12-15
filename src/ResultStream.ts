@@ -11,14 +11,20 @@
  * and limitations under the License.
  */
 
-import { FetchPageResult, Page } from "aws-sdk/clients/qldbsession";
+import {
+    ExecuteStatementResult,
+    FetchPageResult,
+    Page,
+} from "aws-sdk/clients/qldbsession";
 import { dom } from "ion-js";
 import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
 import { Result } from "./Result";
 import { IOUsage } from "./stats/IOUsage";
+import { IOUsageImp } from "./stats/IOUsageImp";
 import { TimingInformation } from "./stats/TimingInformation";
+import { TimingInformationImp } from "./stats/TimingInformationImp";
 
 /**
  * A class representing the result of a statement returned from QLDB as a stream.
@@ -38,21 +44,19 @@ export class ResultStream extends Readable {
     /**
      * Create a ResultStream.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param firstPage The initial page returned from the statement execution.
-     * @param ioUsage The metrics about number of IOs.
-     * @param timingInformation Server side performance information.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      */
-    constructor(txnId: string, firstPage: Page, ioUsage: IOUsage, timingInformation: TimingInformation, communicator: Communicator) {
+    constructor(txnId: string, executeResult: ExecuteStatementResult, communicator: Communicator) {
         super({ objectMode: true });
         this._communicator = communicator;
-        this._cachedPage = firstPage;
+        this._cachedPage = executeResult.FirstPage;
         this._txnId = txnId;
         this._shouldPushCachedPage = true;
         this._retrieveIndex = 0;
         this._isPushingData = false;
-        this._ioUsage = ioUsage;
-        this._timingInformation = timingInformation;
+        this._ioUsage = Result._getIOUsage(executeResult.ConsumedIOs);
+        this._timingInformation = Result._getTimingInformation(executeResult.TimingInformation);
     }
 
     getConsumedIOs(): IOUsage {
@@ -92,15 +96,15 @@ export class ResultStream extends Readable {
                         await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
                     this._cachedPage = fetchPageResult.Page;
                     if (this._ioUsage == null && fetchPageResult.ConsumedIOs != null) {
-                        this._ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs)
+                        this._ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
                     } else if (this._ioUsage != null) {
-                        this._ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
+                        (<IOUsageImp>this._ioUsage).accumulateIOUsage(fetchPageResult.ConsumedIOs);
                     }
                     if (this._timingInformation == null && fetchPageResult.TimingInformation != null) {
                         this._timingInformation =
-                            new TimingInformation(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+                            new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
                     } else if (this._timingInformation != null) {
-                        this._timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
+                        (<TimingInformationImp>this._timingInformation).accumulateTimingInfo(fetchPageResult.TimingInformation);
                     }
                     this._retrieveIndex = 0;
                 } catch (e) {

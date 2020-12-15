@@ -11,12 +11,22 @@
  * and limitations under the License.
  */
 
-import { IonBinary, FetchPageResult, Page, ValueHolder } from "aws-sdk/clients/qldbsession";
+import {
+    IonBinary,
+    ExecuteStatementResult,
+    FetchPageResult,
+    IOUsage as ConsumedIOs,
+    Page,
+    TimingInformation as TimingInfo,
+    ValueHolder
+} from "aws-sdk/clients/qldbsession";
 import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
 import { ResultStream } from "./ResultStream";
+import { IOUsageImp } from "./stats/IOUsageImp";
+import { TimingInformationImp } from "./stats/TimingInformationImp";
 import { IOUsage } from "./stats/IOUsage";
 import { TimingInformation } from "./stats/TimingInformation";
 
@@ -31,6 +41,8 @@ export class Result {
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
+     * @param ioUsage
+     * @param timingInformation
      */
     private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
         this._resultList = resultList;
@@ -41,19 +53,17 @@ export class Result {
     /**
      * Static factory method that creates a Result object, containing the results of a statement execution from QLDB.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param page The initial page returned from the statement execution.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a Result.
      */
     static async create(
         txnId: string,
-        page: Page,
-        ioUsage: IOUsage,
-        timingInformation: TimingInformation,
+        executeResult: ExecuteStatementResult,
         communicator: Communicator
     ): Promise<Result> {
-        const resultList: dom.Value[] = await Result._fetchResultPages(txnId, page, ioUsage, timingInformation, communicator);
-        return new Result(resultList, ioUsage, timingInformation);
+        const result: Result = await Result._fetchResultPages(txnId, executeResult, communicator);
+        return result;
     }
 
     /**
@@ -105,18 +115,18 @@ export class Result {
     /**
      * Fetches all subsequent Pages given an initial Page, places each value of each Page in an Ion value.
      * @param txnId The ID of the transaction the statement was executed in.
-     * @param page The initial page returned from the statement execution.
+     * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a list of Ion values, representing all the returned values of the result set.
      */
     private static async _fetchResultPages(
         txnId: string,
-        page: Page,
-        ioUsage: IOUsage,
-        timingInformation: TimingInformation,
+        executeResult: ExecuteStatementResult,
         communicator: Communicator
-    ): Promise<dom.Value[]> {
-        let currentPage: Page = page;
+    ): Promise<Result> {
+        let currentPage: Page = executeResult.FirstPage;
+        let ioUsage: IOUsageImp = <IOUsageImp>Result._getIOUsage(executeResult.ConsumedIOs);
+        let timingInformation: TimingInformationImp = <TimingInformationImp>Result._getTimingInformation(executeResult.TimingInformation);
         const pageValuesArray: ValueHolder[][] = [];
         if (currentPage.Values && currentPage.Values.length > 0) {
             pageValuesArray.push(currentPage.Values);
@@ -126,13 +136,12 @@ export class Result {
                 await communicator.fetchPage(txnId, currentPage.NextPageToken);
             currentPage = fetchPageResult.Page;
             if (ioUsage == null && fetchPageResult.ConsumedIOs != null) {
-                ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs)
+                ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
             } else if (ioUsage != null) {
-                // ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
-                ioUsage = new IOUsage(fetchPageResult.ConsumedIOs.ReadIOs + 12)
+                ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
             }
             if (timingInformation == null && fetchPageResult.TimingInformation != null) {
-                timingInformation = new TimingInformation(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+                timingInformation = new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
             } else if (timingInformation != null) {
                 timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
             }
@@ -146,7 +155,7 @@ export class Result {
                 ionValues.push(dom.load(Result._handleBlob(valueHolder.IonBinary)));
             });
         });
-        return ionValues;
+        return new Result(ionValues, ioUsage, timingInformation);
     }
 
     /**
@@ -163,5 +172,19 @@ export class Result {
                 res(ionValues);
             });
         });
+    }
+
+    static _getIOUsage(consumedIOs: ConsumedIOs): IOUsage {
+        if (consumedIOs == null) {
+            return null;
+        }
+        return new IOUsageImp(consumedIOs.ReadIOs);
+    }
+
+    static _getTimingInformation(timingInfo: TimingInfo): TimingInformation {
+        if (timingInfo == null) {
+            return null;
+        }
+        return new TimingInformationImp(timingInfo.ProcessingTimeMilliseconds);
     }
 }

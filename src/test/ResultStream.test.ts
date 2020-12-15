@@ -14,7 +14,13 @@
 // Test environment imports
 import "mocha";
 
-import { IOUsage as ConsumedIOs, Page, TimingInformation as TimingInfo, ValueHolder} from "aws-sdk/clients/qldbsession";
+import {
+    ExecuteStatementResult,
+    IOUsage as ConsumedIOs,
+    Page,
+    TimingInformation as TimingInfo,
+    ValueHolder
+} from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom } from "ion-js";
@@ -23,6 +29,8 @@ import * as sinon from "sinon";
 import { Communicator } from "../Communicator";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
+import { IOUsageImp } from "../stats/IOUsageImp";
+import { TimingInformationImp } from "../stats/TimingInformationImp";
 import { IOUsage } from "../stats/IOUsage";
 import { TimingInformation } from "../stats/TimingInformation";
 
@@ -42,8 +50,17 @@ const testPageWithToken: Page = {
     Values: testValues,
     NextPageToken: "nextPageToken"
 };
-const testIOUsage: IOUsage = new IOUsage(5);
-const testTimingInfo: TimingInformation = new TimingInformation(20);
+const testExecuteStatementResult: ExecuteStatementResult = {
+    FirstPage: testPageWithToken,
+    TimingInformation: {
+        ProcessingTimeMilliseconds: 20
+    },
+    ConsumedIOs: {
+        ReadIOs: 5
+    }
+};
+const testIOUsage: IOUsageImp = new IOUsageImp(5);
+const testTimingInfo: TimingInformationImp = new TimingInformationImp(20);
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 mockCommunicator.fetchPage = async () => {
@@ -59,9 +76,7 @@ describe("ResultStream", () => {
     beforeEach(() => {
         resultStream = new ResultStream(
             testTransactionId,
-            testPageWithToken,
-            testIOUsage,
-            testTimingInfo,
+            testExecuteStatementResult,
             mockCommunicator
         );
     });
@@ -77,8 +92,8 @@ describe("ResultStream", () => {
             chai.assert.equal(testTransactionId, resultStream["_txnId"]);
             chai.assert.isTrue(resultStream["_shouldPushCachedPage"]);
             chai.assert.equal(0, resultStream["_retrieveIndex"]);
-            chai.assert.equal(testIOUsage, resultStream["_ioUsage"]);
-            chai.assert.equal(testTimingInfo, resultStream["_timingInformation"]);
+            chai.expect(resultStream["_ioUsage"]).to.be.eql(testIOUsage);
+            chai.expect(resultStream["_timingInformation"]).to.be.eql(testTimingInfo);
         });
     });
 
@@ -286,13 +301,33 @@ describe("ResultStream", () => {
     });
 
     describe("#getConsumedIOs", () => {
-        it("should return an IOUsage object when called", async () => {
+        it("should return an IOUsage object with correct value without next page in result", async () => {
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
         });
 
-        it("should return accumulated number of IOs of first page and next pages", async () => {
+        it("should return null if there are no IOs", async () => {
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithToken,
+                ConsumedIOs: null
+            };
+            resultStream = new ResultStream(
+                testTransactionId,
+                testExecuteStatementResult,
+                mockCommunicator
+            );
+
+            resultStream["_shouldPushCachedPage"] = false;
+            const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
+
+            await resultStream["_pushPageValues"]();
+
+            sinon.assert.called(fetchPageSpy);
+            chai.expect(resultStream.getConsumedIOs()).to.be.null;
+        });
+
+        it("should return accumulated number of IOs of the first page and next pages", async () => {
             const nextPageConsumedIOs: ConsumedIOs = {
                 ReadIOs: 2
             };
@@ -312,16 +347,18 @@ describe("ResultStream", () => {
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(expectedAccumulatedIOs);
         });
 
         it("should return correct number of IOs if first page's IOs is null but next pages have IOs", async () => {
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithToken,
+                ConsumedIOs: null
+            };
             resultStream = new ResultStream(
                 testTransactionId,
-                testPageWithToken,
-                null,
-                testTimingInfo,
+                testExecuteStatementResult,
                 mockCommunicator
             );
             const nextPageConsumedIOs: ConsumedIOs = {
@@ -342,16 +379,27 @@ describe("ResultStream", () => {
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(nextPageConsumedIOs.ReadIOs);
         });
+    });
 
-        it("should return correct null if there is no IOs", async () => {
+    describe("#getTimingInformation", () => {
+        it("should return a TimingInformation object when called without next page", async () => {
+            const timingInformation: TimingInformation = resultStream.getTimingInformation();
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
+            chai.expect(timingInformation.getProcessingTimeMilliseconds())
+                .to.be.eq(timingInformation.getProcessingTimeMilliseconds());
+        });
+
+        it("should return null if there is no processing time", async () => {
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithToken,
+                TimingInformation: null
+            };
             resultStream = new ResultStream(
                 testTransactionId,
-                testPageWithToken,
-                null,
-                testTimingInfo,
+                testExecuteStatementResult,
                 mockCommunicator
             );
 
@@ -360,23 +408,11 @@ describe("ResultStream", () => {
 
             await resultStream["_pushPageValues"]();
 
-            const ioUsage: IOUsage = resultStream.getConsumedIOs();
-
             sinon.assert.called(fetchPageSpy);
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
-            chai.expect(ioUsage.getReadIOs()).to.be.null;
-        });
-    });
-
-    describe("#getTimingInformation", () => {
-        it("should return a TimingInformation object when called", async () => {
-            const timingInformation: TimingInformation = resultStream.getTimingInformation();
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
-            chai.expect(timingInformation.getProcessingTimeMilliseconds())
-                .to.be.eq(timingInformation.getProcessingTimeMilliseconds());
+            chai.expect(resultStream.getTimingInformation()).to.be.null;
         });
 
-        it("should return accumulated processing time for first page and next pages", async () => {
+        it("should return accumulated processing time for the first page and next pages", async () => {
             const nextPageProcessingTime: TimingInfo = {
                 ProcessingTimeMilliseconds: 10
             };
@@ -386,7 +422,7 @@ describe("ResultStream", () => {
                     TimingInformation: nextPageProcessingTime
                 };
             };
-            const expectedAccumulatedProcessingTim: number = testTimingInfo.getProcessingTimeMilliseconds() +
+            const expectedAccumulatedProcessingTime: number = testTimingInfo.getProcessingTimeMilliseconds() +
                 nextPageProcessingTime.ProcessingTimeMilliseconds;
 
             resultStream["_shouldPushCachedPage"] = false;
@@ -397,16 +433,18 @@ describe("ResultStream", () => {
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
-            chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.eq(expectedAccumulatedProcessingTim);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
+            chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.eq(expectedAccumulatedProcessingTime);
         });
 
         it("should return correct processing time if there is no time on first page but next pages has", async () => {
+            const testExecuteStatementResult: ExecuteStatementResult = {
+                FirstPage: testPageWithToken,
+                TimingInformation: null
+            };
             resultStream = new ResultStream(
                 testTransactionId,
-                testPageWithToken,
-                testIOUsage,
-                null,
+                testExecuteStatementResult,
                 mockCommunicator
             );
             const nextPageProcessingTime: TimingInfo = {
@@ -427,30 +465,9 @@ describe("ResultStream", () => {
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
             chai.expect(timingInformation.getProcessingTimeMilliseconds())
                 .to.be.eq(nextPageProcessingTime.ProcessingTimeMilliseconds);
-        });
-
-        it("should return null if there is no processing time", async () => {
-            resultStream = new ResultStream(
-                testTransactionId,
-                testPageWithToken,
-                testIOUsage,
-                null,
-                mockCommunicator
-            );
-
-            resultStream["_shouldPushCachedPage"] = false;
-            const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
-
-            await resultStream["_pushPageValues"]();
-
-            const timingInformation: TimingInformation = resultStream.getTimingInformation();
-
-            sinon.assert.called(fetchPageSpy);
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
-            chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.null;
         });
     });
  });

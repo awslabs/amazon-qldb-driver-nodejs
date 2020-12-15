@@ -22,8 +22,6 @@ import { warn } from "./LogUtil";
 import { QldbHash } from "./QldbHash";
 import { Result } from "./Result";
 import { ResultStream } from "./ResultStream";
-import { IOUsage } from "./stats/IOUsage";
-import { TimingInformation } from "./stats/TimingInformation";
 import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
@@ -129,9 +127,7 @@ export class Transaction implements TransactionExecutable {
      */
     async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        const ioUsage: IOUsage = this._getIOUsage(result.ConsumedIOs);
-        const timingInfo: TimingInformation = this._getTimingInformation(result.TimingInformation);
-        return  Result.create(this._txnId, result.FirstPage, ioUsage, timingInfo, this._communicator);
+        return  Result.create(this._txnId, result, this._communicator);
     }
 
     /**
@@ -149,9 +145,7 @@ export class Transaction implements TransactionExecutable {
      */
     async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        const ioUsage: IOUsage = this._getIOUsage(result.ConsumedIOs);
-        const timingInfo: TimingInformation = this._getTimingInformation(result.TimingInformation);
-        return new ResultStream(this._txnId, result.FirstPage, ioUsage, timingInfo, this._communicator);
+        return new ResultStream(this._txnId, result, this._communicator);
     }
 
     /**
@@ -212,21 +206,5 @@ export class Transaction implements TransactionExecutable {
         } finally {
             this._hashLock.release();
         }
-    }
-
-    private _getIOUsage(consumedIOs: ConsumedIOs): IOUsage {
-        let ioUsage: IOUsage;
-        if (consumedIOs != null) {
-            ioUsage = new IOUsage(consumedIOs.ReadIOs);
-        }
-        return ioUsage;
-    }
-
-    private _getTimingInformation(timingInfo: TimingInfo): TimingInformation {
-        let timingInformation: TimingInformation;
-        if (timingInfo != null) {
-            timingInformation = new TimingInformation(timingInfo.ProcessingTimeMilliseconds);
-        }
-        return timingInformation;
     }
 }
