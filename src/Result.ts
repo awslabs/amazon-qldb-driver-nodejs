@@ -12,9 +12,9 @@
  */
 
 import {
-    IonBinary,
     ExecuteStatementResult,
     FetchPageResult,
+    IonBinary,
     IOUsage as ConsumedIOs,
     Page,
     TimingInformation as TimingInfo,
@@ -25,10 +25,10 @@ import { dom } from "ion-js";
 import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
 import { ResultStream } from "./ResultStream";
-import { IOUsageImp } from "./stats/IOUsageImp";
-import { TimingInformationImp } from "./stats/TimingInformationImp";
 import { IOUsage } from "./stats/IOUsage";
+import { IOUsageImp } from "./stats/IOUsageImp";
 import { TimingInformation } from "./stats/TimingInformation";
+import { TimingInformationImp } from "./stats/TimingInformationImp";
 
 /**
  * A class representing a fully buffered set of results returned from QLDB.
@@ -41,8 +41,8 @@ export class Result {
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
-     * @param ioUsage
-     * @param timingInformation
+     * @param ioUsage IOUsage object, containing the number of consumed IOs for the executed statement.
+     * @param timingInformation Holds processing time for the excuted statement.
      */
     private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
         this._resultList = resultList;
@@ -84,10 +84,18 @@ export class Result {
         return this._resultList.slice();
     }
 
+    /**
+     * Returns the number of read IO request for the executed statement.
+     * @returns IOUsage, containing number of read IOs.
+     */
     getConsumedIOs(): IOUsage {
         return this._ioUsage;
     }
 
+    /**
+     * Returns server-side processing time for the executed statement.
+     * @returns TimingInformation, containing processing time.
+     */
     getTimingInformation(): TimingInformation {
         return this._timingInformation;
     }
@@ -117,7 +125,8 @@ export class Result {
      * @param txnId The ID of the transaction the statement was executed in.
      * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
-     * @returns Promise which fulfills with a list of Ion values, representing all the returned values of the result set.
+     * @returns Promise which fulfills with a Result, containing a list of Ion values, representing all the returned
+     * values of the result set, number of IOs for the request, and time the spent processing the request.
      */
     private static async _fetchResultPages(
         txnId: string,
@@ -174,6 +183,11 @@ export class Result {
         });
     }
 
+    /**
+     * Creates IOUsage from server-side ConsumedIOs.
+     * @param consumedIOs The server-side ConsumedIOs
+     * @returns An instance of IOUsage
+     */
     static _getIOUsage(consumedIOs: ConsumedIOs): IOUsage {
         if (consumedIOs == null) {
             return null;
@@ -181,6 +195,11 @@ export class Result {
         return new IOUsageImp(consumedIOs.ReadIOs);
     }
 
+    /**
+     * Creates TimingInformation from server-side processing time information.
+     * @param timingInfo The server-side processing time information.
+     * @returns An instance of TimingInformation
+     */
     static _getTimingInformation(timingInfo: TimingInfo): TimingInformation {
         if (timingInfo == null) {
             return null;
