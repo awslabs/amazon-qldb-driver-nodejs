@@ -271,25 +271,25 @@ describe("Result", () => {
                 dom.load(Result._handleBlob(value3.IonBinary)),
                 dom.load(Result._handleBlob(value4.IonBinary))
             ];
-            let eventCount: number = 0;
-            const mockResultStream: Readable = new Readable({
-                objectMode: true,
-                read: function(size) {
-                    if (eventCount < values.length) {
-                        eventCount += 1;
-                        return this.push(values[eventCount-1]);
-                    } else {
-                        return this.push(null);
-                    }
-                },
-            });
+            const allValues: ValueHolder[] = [value1, value2, value3, value4];
+            const testPage: Page = {Values: allValues};
+
+            mockCommunicator.fetchPage = async () => {
+                return {
+                    Page: testPage
+                };
+            };
+            const testExecuteResult: ExecuteStatementResult = {
+                FirstPage: testPage,
+            };
+            const mockResultStream: ResultStream = new ResultStream(testTransactionId, testExecuteResult, mockCommunicator);
 
             const result: Result = await Result.bufferResultStream(<ResultStream> mockResultStream);
             const resultList: dom.Value[] = result.getResultList();
 
             chai.assert.equal(values.length, resultList.length);
             resultList.forEach((result, i) => {
-                chai.assert.equal(
+                chai.assert.deepEqual(
                     result,
                     values[i]
                 );
