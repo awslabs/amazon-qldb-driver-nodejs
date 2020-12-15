@@ -59,10 +59,18 @@ export class ResultStream extends Readable {
         this._timingInformation = Result._getTimingInformation(executeResult.TimingInformation);
     }
 
+    /**
+     * Returns the number of read IO request for the executed statement.
+     * @returns IOUsage, containing number of read IOs.
+     */
     getConsumedIOs(): IOUsage {
         return this._ioUsage;
     }
 
+    /**
+     * Returns server-side processing time for the executed statement.
+     * @returns TimingInformation, containing processing time.
+     */
     getTimingInformation(): TimingInformation {
         return this._timingInformation;
     }

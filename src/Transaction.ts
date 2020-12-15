@@ -11,7 +11,7 @@
  * and limitations under the License.
  */
 
-import { CommitTransactionResult, ExecuteStatementResult, IOUsage as ConsumedIOs, TimingInformation as TimingInfo, ValueHolder } from "aws-sdk/clients/qldbsession";
+import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
 import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
 import { Readable } from "stream";

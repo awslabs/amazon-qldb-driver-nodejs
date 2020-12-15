@@ -26,16 +26,15 @@ import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom, IonType, IonTypes} from "ion-js";
 import * as sinon from "sinon";
-import { Readable } from "stream";
 
 import { Communicator } from "../Communicator";
 import { ClientException } from "../errors/Errors";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
-import { IOUsageImp } from "../stats/IOUsageImp";
-import { TimingInformationImp } from "../stats/TimingInformationImp";
 import { IOUsage } from "../stats/IOUsage";
+import { IOUsageImp } from "../stats/IOUsageImp";
 import { TimingInformation } from "../stats/TimingInformation";
+import { TimingInformationImp } from "../stats/TimingInformationImp";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -52,23 +51,17 @@ const testPageWithToken: Page = {
     Values: testValueHolder,
     NextPageToken: testNextPageToken
 };
+const timingInformation: TimingInfo = { ProcessingTimeMilliseconds: 20 };
+const consumedIOs: ConsumedIOs = { ReadIOs: 5 };
 const testExecuteResultWithNextPage: ExecuteStatementResult = {
     FirstPage: testPageWithToken,
-    TimingInformation: {
-        ProcessingTimeMilliseconds: 20
-    },
-    ConsumedIOs: {
-        ReadIOs: 5
-    }
+    TimingInformation: timingInformation,
+    ConsumedIOs: consumedIOs
 };
 const testExecuteResult: ExecuteStatementResult = {
     FirstPage: testPage,
-    TimingInformation: {
-        ProcessingTimeMilliseconds: 20
-    },
-    ConsumedIOs: {
-        ReadIOs: 5
-    }
+    TimingInformation: timingInformation,
+    ConsumedIOs: consumedIOs
 };
 const testIOUsage: IOUsageImp = new IOUsageImp(5);
 const testTimingInfo: TimingInformationImp = new TimingInformationImp(20);

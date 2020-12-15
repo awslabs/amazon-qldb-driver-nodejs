@@ -29,10 +29,10 @@ import * as sinon from "sinon";
 import { Communicator } from "../Communicator";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
-import { IOUsageImp } from "../stats/IOUsageImp";
-import { TimingInformationImp } from "../stats/TimingInformationImp";
 import { IOUsage } from "../stats/IOUsage";
+import { IOUsageImp } from "../stats/IOUsageImp";
 import { TimingInformation } from "../stats/TimingInformation";
+import { TimingInformationImp } from "../stats/TimingInformationImp";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();

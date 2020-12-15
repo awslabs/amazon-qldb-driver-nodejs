@@ -19,7 +19,6 @@ import {
     AbortTransactionResult,
     ClientConfiguration,
     ExecuteStatementResult,
-    Page,
     PageToken,
     StartTransactionResult,
     ValueHolder
@@ -44,7 +43,6 @@ chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
 const testRetryLimit: number = 4;
-const testLedgerName: string = "fakeLedgerName";
 const testSessionToken: string = "sessionToken";
 const testTransactionId: string = "txnId";
 const testStartTransactionResult: StartTransactionResult = {
@@ -53,9 +51,6 @@ const testStartTransactionResult: StartTransactionResult = {
 const testMessage: string = "foo";
 const testStatement: string = "SELECT * FROM foo";
 const testAbortTransactionResult: AbortTransactionResult = {};
-
-const TEST_SLEEP_CAP_MS: number = 5000;
-const TEST_SLEEP_BASE_MS: number = 10;
 
 const testValueHolder: ValueHolder[] = [{IonBinary: "{ hello:\"world\" }"}];
 const testPageToken: PageToken = "foo";
@@ -69,16 +64,15 @@ const mockLowLevelClientOptions: ClientConfiguration = {
     region: "fakeRegion"
 };
 const testQldbLowLevelClient: QLDBSession = new QLDBSession(mockLowLevelClientOptions);
-const testPage: Page = {};
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 const mockResult: Result = <Result><any> sandbox.mock(Result);
 const mockTransaction: Transaction = <Transaction><any> sandbox.mock(Transaction);
 mockTransaction.getTransactionId = () => {
     return "mockTransactionId";
-}
+};
 
-const resultStreamObject: ResultStream = new ResultStream(testTransactionId, testPage, mockCommunicator);
+const resultStreamObject: ResultStream = new ResultStream(testTransactionId, testExecuteStatementResult, mockCommunicator);
 let qldbSession: QldbSession;
 let executionContext: TransactionExecutionContext;
 
@@ -343,7 +337,7 @@ describe("QldbSession", () => {
     });
 
     describe("#RetryDelayTime()", () => {
-        /* Test that the 
+        /* Test that the
             1. Default retry policy increases delay exponentially (when math.random is overriden to return 1)
             2. _sleep method gets called with the calculated delay time
         */
@@ -352,7 +346,7 @@ describe("QldbSession", () => {
             const mathRandStub = sandbox.stub(Math, "random");
             mathRandStub.returns(1);
             let executionContext: TransactionExecutionContext = new TransactionExecutionContext();
-            let defaultBackOffFunction: BackoffFunction = defaultRetryConfig.getBackoffFunction(); 
+            let defaultBackOffFunction: BackoffFunction = defaultRetryConfig.getBackoffFunction();
 
             //Increment the attempt number to 1 and determine what the delay time would be when using default retry policy
             executionContext.incrementExecutionAttempt();
