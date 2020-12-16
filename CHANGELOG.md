@@ -1,5 +1,5 @@
 # 2.1.0
-adds support for obtaining basic server-side statistics on individual statement executions.
+Add support for obtaining basic server-side statistics on individual statement executions.
 
 ## :tada: Enhancements
 * Added `IOUsage` and `TimingInformation` interface to provide server-side statistics

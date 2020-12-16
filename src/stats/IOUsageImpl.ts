@@ -15,11 +15,11 @@ import { IOUsage as sdkIOUsage } from "aws-sdk/clients/qldbsession";
 
 import { IOUsage } from "./IOUsage";
 
-export class IOUsageImp implements IOUsage {
+export class IOUsageImpl implements IOUsage {
     private _readIOs: number;
 
     /**
-     * Creates an IOUsageImp.
+     * Creates an IOUsageImpl.
      * @param readIOs The number of Read IOs.
      */
     constructor(readIOs: number) {

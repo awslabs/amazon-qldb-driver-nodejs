@@ -22,9 +22,9 @@ import { Readable } from "stream";
 import { Communicator } from "./Communicator";
 import { Result } from "./Result";
 import { IOUsage } from "./stats/IOUsage";
-import { IOUsageImp } from "./stats/IOUsageImp";
+import { IOUsageImpl } from "./stats/IOUsageImpl";
 import { TimingInformation } from "./stats/TimingInformation";
-import { TimingInformationImp } from "./stats/TimingInformationImp";
+import { TimingInformationImpl } from "./stats/TimingInformationImpl";
 
 /**
  * A class representing the result of a statement returned from QLDB as a stream.
@@ -38,8 +38,8 @@ export class ResultStream extends Readable {
     private _shouldPushCachedPage: boolean;
     private _retrieveIndex: number;
     private _isPushingData: boolean;
-    private _ioUsage: IOUsage;
-    private _timingInformation: TimingInformation;
+    private _ioUsage: IOUsageImpl;
+    private _timingInformation: TimingInformationImpl;
 
     /**
      * Create a ResultStream.
@@ -105,16 +105,16 @@ export class ResultStream extends Readable {
                     this._cachedPage = fetchPageResult.Page;
 
                     if (this._ioUsage == null && fetchPageResult.ConsumedIOs != null) {
-                        this._ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
+                        this._ioUsage = new IOUsageImpl(fetchPageResult.ConsumedIOs.ReadIOs)
                     } else if (this._ioUsage != null) {
-                        (<IOUsageImp>this._ioUsage).accumulateIOUsage(fetchPageResult.ConsumedIOs);
+                        this._ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
                     }
 
                     if (this._timingInformation == null && fetchPageResult.TimingInformation != null) {
                         this._timingInformation =
-                            new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+                            new TimingInformationImpl(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
                     } else if (this._timingInformation != null) {
-                        (<TimingInformationImp>this._timingInformation).accumulateTimingInfo(fetchPageResult.TimingInformation);
+                        this._timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
                     }
 
                     this._retrieveIndex = 0;

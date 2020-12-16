@@ -15,11 +15,11 @@ import { TimingInformation as sdkTimingInformation } from "aws-sdk/clients/qldbs
 
 import { TimingInformation } from "./TimingInformation";
 
-export class TimingInformationImp implements TimingInformation {
+export class TimingInformationImpl implements TimingInformation {
     private _processingTimeMilliseconds: number;
 
     /**
-     * Creates a TimingInformationImp.
+     * Creates a TimingInformationImpl.
      * @param processingTimeMilliseconds The server-side processing time in milliseconds.
      */
     constructor(processingTimeMilliseconds: number) {

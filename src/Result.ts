@@ -26,9 +26,9 @@ import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
 import { ResultStream } from "./ResultStream";
 import { IOUsage } from "./stats/IOUsage";
-import { IOUsageImp } from "./stats/IOUsageImp";
+import { IOUsageImpl } from "./stats/IOUsageImpl";
 import { TimingInformation } from "./stats/TimingInformation";
-import { TimingInformationImp } from "./stats/TimingInformationImp";
+import { TimingInformationImpl } from "./stats/TimingInformationImpl";
 
 /**
  * A class representing a fully buffered set of results returned from QLDB.
@@ -134,8 +134,8 @@ export class Result {
         communicator: Communicator
     ): Promise<Result> {
         let currentPage: Page = executeResult.FirstPage;
-        let ioUsage: IOUsageImp = <IOUsageImp>Result._getIOUsage(executeResult.ConsumedIOs);
-        let timingInformation: TimingInformationImp = <TimingInformationImp>Result._getTimingInformation(executeResult.TimingInformation);
+        let ioUsage: IOUsageImpl = Result._getIOUsage(executeResult.ConsumedIOs);
+        let timingInformation: TimingInformationImpl = Result._getTimingInformation(executeResult.TimingInformation);
         const pageValuesArray: ValueHolder[][] = [];
         if (currentPage.Values && currentPage.Values.length > 0) {
             pageValuesArray.push(currentPage.Values);
@@ -149,13 +149,13 @@ export class Result {
             }
 
             if (ioUsage == null && fetchPageResult.ConsumedIOs != null) {
-                ioUsage = new IOUsageImp(fetchPageResult.ConsumedIOs.ReadIOs)
+                ioUsage = new IOUsageImpl(fetchPageResult.ConsumedIOs.ReadIOs)
             } else if (ioUsage != null) {
                 ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
             }
 
             if (timingInformation == null && fetchPageResult.TimingInformation != null) {
-                timingInformation = new TimingInformationImp(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
+                timingInformation = new TimingInformationImpl(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
             } else if (timingInformation != null) {
                 timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
             }
@@ -190,11 +190,11 @@ export class Result {
      * @param consumedIOs The server-side ConsumedIOs
      * @returns An instance of IOUsage
      */
-    static _getIOUsage(consumedIOs: sdkIOUsage): IOUsage {
+    static _getIOUsage(consumedIOs: sdkIOUsage): IOUsageImpl {
         if (consumedIOs == null) {
             return null;
         }
-        return new IOUsageImp(consumedIOs.ReadIOs);
+        return new IOUsageImpl(consumedIOs.ReadIOs);
     }
 
     /**
@@ -202,10 +202,10 @@ export class Result {
      * @param timingInfo The server-side processing time information.
      * @returns An instance of TimingInformation
      */
-    static _getTimingInformation(timingInfo: sdkTimingInformation): TimingInformation {
+    static _getTimingInformation(timingInfo: sdkTimingInformation): TimingInformationImpl {
         if (timingInfo == null) {
             return null;
         }
-        return new TimingInformationImp(timingInfo.ProcessingTimeMilliseconds);
+        return new TimingInformationImpl(timingInfo.ProcessingTimeMilliseconds);
     }
 }

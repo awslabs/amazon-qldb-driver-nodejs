@@ -127,7 +127,7 @@ export class Transaction implements TransactionExecutable {
      */
     async execute(statement: string, ...parameters: any[]): Promise<Result> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        return  Result.create(this._txnId, result, this._communicator);
+        return Result.create(this._txnId, result, this._communicator);
     }
 
     /**

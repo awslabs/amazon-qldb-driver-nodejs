@@ -32,9 +32,9 @@ import { ClientException } from "../errors/Errors";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 import { IOUsage } from "../stats/IOUsage";
-import { IOUsageImp } from "../stats/IOUsageImp";
+import { IOUsageImpl } from "../stats/IOUsageImpl";
 import { TimingInformation } from "../stats/TimingInformation";
-import { TimingInformationImp } from "../stats/TimingInformationImp";
+import { TimingInformationImpl } from "../stats/TimingInformationImpl";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -63,8 +63,8 @@ const testExecuteResult: ExecuteStatementResult = {
     TimingInformation: timingInformation,
     ConsumedIOs: consumedIOs
 };
-const testIOUsage: IOUsageImp = new IOUsageImp(5);
-const testTimingInfo: TimingInformationImp = new TimingInformationImp(20);
+const testIOUsage: IOUsageImpl = new IOUsageImpl(5);
+const testTimingInfo: TimingInformationImpl = new TimingInformationImpl(20);
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 
@@ -306,7 +306,7 @@ describe("Result", () => {
            );
 
            const ioUsage: IOUsage = result.getConsumedIOs();
-           chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
+           chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
            chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
        });
 
@@ -342,7 +342,7 @@ describe("Result", () => {
                mockCommunicator
            );
            const ioUsage: IOUsage = result.getConsumedIOs();
-           chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
+           chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
            chai.expect(ioUsage.getReadIOs()).to.be.eq(expectedAccumulatedIOs);
        });
 
@@ -388,7 +388,7 @@ describe("Result", () => {
            );
 
            const timingInformation: TimingInformation = result.getTimingInformation();
-           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
+           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
            chai.expect(timingInformation.getProcessingTimeMilliseconds())
                .to.be.eq(testTimingInfo.getProcessingTimeMilliseconds());
        });
@@ -426,7 +426,7 @@ describe("Result", () => {
                mockCommunicator
            );
            const timingInformation: TimingInformation = result.getTimingInformation();
-           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
+           chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
            chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.eq(expectedAccumulatedTime);
        });
 
@@ -493,7 +493,7 @@ describe("Result", () => {
 
             const ioUsage = Result["_getIOUsage"](consumedIOs);
 
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImp);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
             chai.assert.deepEqual(ioUsage, testIOUsage);
         });
     });
@@ -508,7 +508,7 @@ describe("Result", () => {
 
             const timingInformation = Result["_getTimingInformation"](timingInfo);
 
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImp);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
             chai.assert.deepEqual(timingInformation, testTimingInfo);
         });
     });
