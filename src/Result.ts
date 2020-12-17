@@ -41,7 +41,7 @@ export class Result {
     /**
      * Creates a Result.
      * @param resultList A list of Ion values containing the statement execution's result returned from QLDB.
-     * @param ioUsage IOUsage object, containing the number of consumed IO requests for the executed statement.
+     * @param ioUsage Contains the number of consumed IO requests for the executed statement.
      * @param timingInformation Holds server side processing time for the executed statement.
      */
     private constructor(resultList: dom.Value[], ioUsage: IOUsage, timingInformation: TimingInformation) {
@@ -187,8 +187,8 @@ export class Result {
 
     /**
      * Creates IOUsage from server-side ConsumedIOs.
-     * @param consumedIOs The server-side ConsumedIOs
-     * @returns An instance of IOUsage
+     * @param consumedIOs The server-side ConsumedIOs.
+     * @returns An instance of IOUsage.
      */
     static _getIOUsage(consumedIOs: sdkIOUsage): IOUsageImpl {
         if (consumedIOs == null) {
@@ -200,7 +200,7 @@ export class Result {
     /**
      * Creates TimingInformation from server-side processing time information.
      * @param timingInfo The server-side processing time information.
-     * @returns An instance of TimingInformation
+     * @returns An instance of TimingInformation.
      */
     static _getTimingInformation(timingInfo: sdkTimingInformation): TimingInformationImpl {
         if (timingInfo == null) {
