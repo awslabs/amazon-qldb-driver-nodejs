@@ -22,9 +22,7 @@ import { Readable } from "stream";
 import { Communicator } from "./Communicator";
 import { Result } from "./Result";
 import { IOUsage } from "./stats/IOUsage";
-import { IOUsageImpl } from "./stats/IOUsageImpl";
 import { TimingInformation } from "./stats/TimingInformation";
-import { TimingInformationImpl } from "./stats/TimingInformationImpl";
 
 /**
  * A class representing the result of a statement returned from QLDB as a stream.
@@ -38,8 +36,8 @@ export class ResultStream extends Readable {
     private _shouldPushCachedPage: boolean;
     private _retrieveIndex: number;
     private _isPushingData: boolean;
-    private _ioUsage: IOUsageImpl;
-    private _timingInformation: TimingInformationImpl;
+    private _readIOs: number;
+    private _processingTime: number;
 
     /**
      * Create a ResultStream.
@@ -55,24 +53,29 @@ export class ResultStream extends Readable {
         this._shouldPushCachedPage = true;
         this._retrieveIndex = 0;
         this._isPushingData = false;
-        this._ioUsage = Result._getIOUsage(executeResult.ConsumedIOs);
-        this._timingInformation = Result._getTimingInformation(executeResult.TimingInformation);
+        this._readIOs = executeResult.ConsumedIOs == null ? null : executeResult.ConsumedIOs.ReadIOs;
+        this._processingTime =
+            executeResult.TimingInformation == null ? null : executeResult.TimingInformation.ProcessingTimeMilliseconds;
     }
 
     /**
-     * Returns the number of read IO request for the executed statement.
+     * Returns the number of read IO request for the executed statement. The statistics are stateful.
      * @returns IOUsage, containing number of read IOs.
      */
     getConsumedIOs(): IOUsage {
-        return this._ioUsage;
+        return this._readIOs == null
+            ? null
+            : new IOUsage(this._readIOs);
     }
 
     /**
-     * Returns server-side processing time for the executed statement.
+     * Returns server-side processing time for the executed statement. The statistics are stateful
      * @returns TimingInformation, containing processing time.
      */
     getTimingInformation(): TimingInformation {
-        return this._timingInformation;
+        return this._processingTime == null
+            ? null
+            : new TimingInformation(this._processingTime);
     }
 
     /**
@@ -104,17 +107,12 @@ export class ResultStream extends Readable {
                         await this._communicator.fetchPage(this._txnId, this._cachedPage.NextPageToken);
                     this._cachedPage = fetchPageResult.Page;
 
-                    if (this._ioUsage == null && fetchPageResult.ConsumedIOs != null) {
-                        this._ioUsage = new IOUsageImpl(fetchPageResult.ConsumedIOs.ReadIOs)
-                    } else if (this._ioUsage != null) {
-                        this._ioUsage.accumulateIOUsage(fetchPageResult.ConsumedIOs);
-                    }
+                    if (fetchPageResult.ConsumedIOs != null) {
+                        this._readIOs += fetchPageResult.ConsumedIOs.ReadIOs;
+                     }
 
-                    if (this._timingInformation == null && fetchPageResult.TimingInformation != null) {
-                        this._timingInformation =
-                            new TimingInformationImpl(fetchPageResult.TimingInformation.ProcessingTimeMilliseconds)
-                    } else if (this._timingInformation != null) {
-                        this._timingInformation.accumulateTimingInfo(fetchPageResult.TimingInformation);
+                    if (fetchPageResult.TimingInformation != null) {
+                        this._processingTime += fetchPageResult.TimingInformation.ProcessingTimeMilliseconds;
                     }
 
                     this._retrieveIndex = 0;

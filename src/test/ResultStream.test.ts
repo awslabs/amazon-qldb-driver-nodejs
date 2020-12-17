@@ -30,9 +30,7 @@ import { Communicator } from "../Communicator";
 import { Result } from "../Result";
 import { ResultStream } from "../ResultStream";
 import { IOUsage } from "../stats/IOUsage";
-import { IOUsageImpl } from "../stats/IOUsageImpl";
 import { TimingInformation } from "../stats/TimingInformation";
-import { TimingInformationImpl } from "../stats/TimingInformationImpl";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -59,8 +57,8 @@ const testExecuteStatementResult: ExecuteStatementResult = {
         ReadIOs: 5
     }
 };
-const testIOUsage: IOUsageImpl = new IOUsageImpl(5);
-const testTimingInfo: TimingInformationImpl = new TimingInformationImpl(20);
+const testIOUsage: IOUsage = new IOUsage(5);
+const testTimingInfo: TimingInformation = new TimingInformation(20);
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 mockCommunicator.fetchPage = async () => {
@@ -92,8 +90,8 @@ describe("ResultStream", () => {
             chai.assert.equal(testTransactionId, resultStream["_txnId"]);
             chai.assert.isTrue(resultStream["_shouldPushCachedPage"]);
             chai.assert.equal(0, resultStream["_retrieveIndex"]);
-            chai.expect(resultStream["_ioUsage"]).to.be.eql(testIOUsage);
-            chai.expect(resultStream["_timingInformation"]).to.be.eql(testTimingInfo);
+            chai.assert.equal(testIOUsage.getReadIOs(), resultStream["_readIOs"]);
+            chai.assert.equal(testTimingInfo.getProcessingTimeMilliseconds(), resultStream["_processingTime"]);
         });
     });
 
@@ -311,7 +309,7 @@ describe("ResultStream", () => {
             await resultStream["_pushPageValues"]();
 
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
         });
 
@@ -355,7 +353,7 @@ describe("ResultStream", () => {
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(expectedAccumulatedIOs);
         });
 
@@ -387,7 +385,7 @@ describe("ResultStream", () => {
             const ioUsage: IOUsage = resultStream.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(ioUsage).to.be.an.instanceOf(IOUsageImpl);
+            chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(nextPageConsumedIOs.ReadIOs);
         });
     });
@@ -403,7 +401,7 @@ describe("ResultStream", () => {
             await resultStream["_pushPageValues"]();
 
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
             chai.expect(timingInformation.getProcessingTimeMilliseconds())
                 .to.be.eq(timingInformation.getProcessingTimeMilliseconds());
         });
@@ -449,7 +447,7 @@ describe("ResultStream", () => {
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
             chai.expect(timingInformation.getProcessingTimeMilliseconds()).to.be.eq(expectedAccumulatedProcessingTime);
         });
 
@@ -481,7 +479,7 @@ describe("ResultStream", () => {
             const timingInformation: TimingInformation = resultStream.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformationImpl);
+            chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
             chai.expect(timingInformation.getProcessingTimeMilliseconds())
                 .to.be.eq(nextPageProcessingTime.ProcessingTimeMilliseconds);
         });

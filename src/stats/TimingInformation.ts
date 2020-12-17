@@ -14,10 +14,22 @@
 /**
  * Provides metrics on server-side processing time for requests.
  */
-export interface TimingInformation {
+export class TimingInformation {
+    private _processingTimeMilliseconds: number;
+
+    /**
+     * Creates a TimingInformation.
+     * @param processingTimeMilliseconds The server-side processing time in milliseconds.
+     */
+    constructor(processingTimeMilliseconds: number) {
+        this._processingTimeMilliseconds = processingTimeMilliseconds;
+    }
+
     /**
      * Provides the server-side time spent on a request.
      * @returns The server-side processing time in millisecond.
      */
-    getProcessingTimeMilliseconds(): number;
+    getProcessingTimeMilliseconds(): number {
+        return this._processingTimeMilliseconds;
+    }
 }

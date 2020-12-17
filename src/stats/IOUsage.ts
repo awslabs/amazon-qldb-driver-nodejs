@@ -14,10 +14,22 @@
 /**
  * Provides metrics on IO usage of requests.
  */
-export interface IOUsage {
+export class IOUsage {
+    private _readIOs: number;
+
+    /**
+     * Creates an IOUsage.
+     * @param readIOs The number of Read IOs.
+     */
+    constructor(readIOs: number) {
+        this._readIOs = readIOs;
+    }
+
     /**
      * Provides the number of Read IOs for a request.
      * @returns The number of Reads for a request.
      */
-    getReadIOs(): number;
+    getReadIOs(): number {
+        return this._readIOs;
+    }
 }
