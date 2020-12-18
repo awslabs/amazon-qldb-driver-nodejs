@@ -6,7 +6,7 @@ Add support for obtaining basic server-side statistics on individual statement e
    * IOUsage provides `getReadIOs(): number`
    * TimingInformation provides `getProcessingTimeMilliseconds(): number`
    * Added `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` to the `Result` and `ResultStream`
-   * `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` methods are stateful, meaning the statistics returned by the them reflect the state at the time of method execution
+   * `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` methods are stateful, meaning the statistics returned by them reflect the state at the time of method execution
 
 # 2.0.0 (2020-08-27)
 

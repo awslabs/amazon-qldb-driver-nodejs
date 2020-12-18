@@ -122,7 +122,7 @@ export class Result {
      * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a Result, containing a list of Ion values, representing all the returned
-     * values of the result set, number of IOs for the request, and time the spent processing the request.
+     * values of the result set, number of IOs for the request, and the time spent processing the request.
      */
     private static async _fetchResultPages(
         txnId: string,
