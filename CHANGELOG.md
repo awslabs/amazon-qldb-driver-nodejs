@@ -2,11 +2,11 @@
 Add support for obtaining basic server-side statistics on individual statement executions.
 
 ## :tada: Enhancements
-* Added `IOUsage` and `TimingInformation` interface to provide server-side statistics
+* Added `IOUsage` and `TimingInformation` interface to provide server-side execution statistics
    * IOUsage provides `getReadIOs(): number`
    * TimingInformation provides `getProcessingTimeMilliseconds(): number`
    * Added `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` to the `Result` and `ResultStream`
-   * IOUsage and TimingInformation are stateful, meaning the statistics returned by the method reflect the state at the time of method execution
+   * `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` methods are stateful, meaning the statistics returned by the them reflect the state at the time of method execution
 
 # 2.0.0 (2020-08-27)
 
