@@ -32,7 +32,7 @@ import * as Errors from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 import { QldbHash } from "../QldbHash";
 import { Result } from "../Result";
-import { ResultStream } from "../ResultStream";
+import { ResultReadable } from "../ResultReadable";
 import { Transaction } from "../Transaction";
 import { expect } from "chai";
 
@@ -267,7 +267,7 @@ describe("Transaction", () => {
 
     describe("#executeAndStreamResults()", () => {
         it("should return a Stream object when provided with a statement", async () => {
-            const sampleResultStreamObject: ResultStream = new ResultStream(
+            const sampleResultReadableObject: ResultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
@@ -276,11 +276,11 @@ describe("Transaction", () => {
             const result: Readable = await transaction.executeAndStreamResults(testStatement);
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testTransactionId, testStatement, []);
-            chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultStreamObject));
+            chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultReadableObject));
         });
 
         it("should return a Stream object when provided with a statement and parameters", async () => {
-            const sampleResultStreamObject: ResultStream = new ResultStream(
+            const sampleResultReadableObject: ResultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
@@ -291,7 +291,7 @@ describe("Transaction", () => {
             const result: Readable = await transaction.executeAndStreamResults(testStatement, param1, param2);
             sinon.assert.calledOnce(sendExecuteSpy);
             sinon.assert.calledWith(sendExecuteSpy, testStatement, [param1, param2]);
-            chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultStreamObject));
+            chai.assert.equal(JSON.stringify(result), JSON.stringify(sampleResultReadableObject));
         });
 
         it("should return a rejected promise when error is thrown", async () => {

@@ -11,9 +11,8 @@
  * and limitations under the License.
  */
 
-import { Readable } from "stream";
-
 import { Result } from "./Result";
+import { ResultReadable } from "./ResultReadable";
 
 /**
  * Interface for execution against QLDB in the context of a transaction.
@@ -35,5 +34,5 @@ export interface TransactionExecutable {
      *                   filling in parameters of the statement.
      * @returns Promise which fulfills with a Readable.
      */
-    executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable>;
+    executeAndStreamResults(statement: string, ...parameters: any[]): Promise<ResultReadable>;
 }
