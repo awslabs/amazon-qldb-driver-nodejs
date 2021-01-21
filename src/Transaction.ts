@@ -14,14 +14,13 @@
 import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
 import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
-import { Readable } from "stream";
 
 import { Communicator } from "./Communicator";
 import { ClientException, isOccConflictException, TransactionClosedError } from "./errors/Errors";
 import { warn } from "./LogUtil";
 import { QldbHash } from "./QldbHash";
 import { Result } from "./Result";
-import { ResultStream } from "./ResultStream";
+import { ResultReadable } from "./ResultReadable";
 import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
@@ -63,7 +62,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * Abort this transaction and close child ResultStream objects. No-op if already closed by commit or previous abort.
+     * Abort this transaction and close child ResultReadable objects. No-op if already closed by commit or previous abort.
      * @returns Promise which fulfills with void.
      */
     async abort(): Promise<void> {
@@ -75,7 +74,7 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * Commits and closes child ResultStream objects.
+     * Commits and closes child ResultReadable objects.
      * @returns Promise which fulfills with void.
      * @throws {@linkcode TransactionClosedError} when this transaction is closed.
      * @throws {@linkcode ClientException} when the commit digest from commit transaction result does not match.
@@ -143,9 +142,9 @@ export class Transaction implements TransactionExecutable {
      * @throws {@linkcode TransactionClosedError} when the transaction is closed.
      * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
+    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<ResultReadable> {
         const result: ExecuteStatementResult = await this._sendExecute(statement, parameters);
-        return new ResultStream(this._txnId, result, this._communicator);
+        return new ResultReadable(this._txnId, result, this._communicator);
     }
 
     /**

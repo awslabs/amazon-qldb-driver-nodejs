@@ -1,3 +1,8 @@
+# 2.1.1
+* Export `ResultReadable`.
+* Change the return type of `executeAndStreamResults()` from `Readable` to `ResultReadable` which extends `Readable`.
+* `getConsumedIOs(): IOUsage` and `getTimingInformation(): TimingInformation` functions, are accessible through `ResultReadable`.
+
 # 2.1.0
 Add support for obtaining basic server-side statistics on individual statement executions.
 

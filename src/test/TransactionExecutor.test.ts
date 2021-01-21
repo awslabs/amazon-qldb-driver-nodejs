@@ -20,7 +20,7 @@ import * as sinon from "sinon";
 
 import { LambdaAbortedError } from "../errors/Errors";
 import { Result } from "../Result";
-import { ResultStream } from "../ResultStream";
+import { ResultReadable } from "../ResultReadable";
 import { Transaction } from "../Transaction";
 import { TransactionExecutor } from "../TransactionExecutor";
 
@@ -32,7 +32,7 @@ const testMessage: string = "foo";
 const testTransactionId: string = "txnId";
 
 const mockResult: Result = <Result><any> sandbox.mock(Result);
-const mockResultStream: ResultStream = <ResultStream><any> sandbox.mock(ResultStream);
+const mockResultReadable: ResultReadable = <ResultReadable><any> sandbox.mock(ResultReadable);
 const mockTransaction: Transaction = <Transaction><any> sandbox.mock(Transaction);
 
 let transactionExecutor: TransactionExecutor;
@@ -100,23 +100,23 @@ describe("TransactionExecutor", () => {
     describe("#executeAndStreamResults()", () => {
         it("should return a Result object when provided with a statement", async () => {
             mockTransaction.executeAndStreamResults = async () => {
-                return mockResultStream;
+                return mockResultReadable;
             };
             const transactionExecuteSpy = sandbox.spy(mockTransaction, "executeAndStreamResults");
-            const resultStream = await transactionExecutor.executeAndStreamResults(testStatement);
-            chai.assert.equal(mockResultStream, resultStream);
+            const resultReadable = await transactionExecutor.executeAndStreamResults(testStatement);
+            chai.assert.equal(mockResultReadable, resultReadable);
             sinon.assert.calledOnce(transactionExecuteSpy);
             sinon.assert.calledWith(transactionExecuteSpy, testStatement);
         });
 
         it("should return a Result object when provided with a statement and parameters", async () => {
             mockTransaction.executeAndStreamResults = async () => {
-                return mockResultStream;
+                return mockResultReadable;
             };
 
             const transactionExecuteSpy = sandbox.spy(mockTransaction, "executeAndStreamResults");
-            const resultStream = await transactionExecutor.executeAndStreamResults(testStatement, [5]);
-            chai.assert.equal(mockResultStream, resultStream);
+            const resultReadable = await transactionExecutor.executeAndStreamResults(testStatement, [5]);
+            chai.assert.equal(mockResultReadable, resultReadable);
             sinon.assert.calledOnce(transactionExecuteSpy);
             sinon.assert.calledWith(transactionExecuteSpy, testStatement, [5]);
         });

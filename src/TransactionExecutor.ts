@@ -11,10 +11,9 @@
  * and limitations under the License.
  */
 
-import { Readable } from "stream";
-
 import { LambdaAbortedError } from "./errors/Errors";
 import { Result } from "./Result";
+import { ResultReadable } from "./ResultReadable";
 import { Transaction } from "./Transaction";
 import { TransactionExecutable } from "./TransactionExecutable";
 
@@ -77,7 +76,7 @@ export class TransactionExecutor implements TransactionExecutable {
      * @throws {@linkcode TransactionClosedError} when the transaction is closed.
      * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
      */
-    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<Readable> {
+    async executeAndStreamResults(statement: string, ...parameters: any[]): Promise<ResultReadable> {
         return await this._transaction.executeAndStreamResults(statement, ...parameters);
     }
 

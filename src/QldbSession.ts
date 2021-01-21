@@ -24,7 +24,7 @@ import {
 } from "./errors/Errors";
 import { warn } from "./LogUtil";
 import { Result } from "./Result";
-import { ResultStream } from "./ResultStream";
+import { ResultReadable } from "./ResultReadable";
 import { RetryConfig } from "./retry/RetryConfig";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
@@ -63,8 +63,8 @@ export class QldbSession {
                 transaction = await this.startTransaction();
                 const transactionExecutor = new TransactionExecutor(transaction);
                 let returnedValue: any = await transactionLambda(transactionExecutor);
-                if (returnedValue instanceof ResultStream) {
-                    returnedValue = await Result.bufferResultStream(returnedValue);
+                if (returnedValue instanceof ResultReadable) {
+                    returnedValue = await Result.bufferResultReadable(returnedValue);
                 }
                 await transaction.commit();
                 return returnedValue;

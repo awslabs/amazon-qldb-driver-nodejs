@@ -28,7 +28,7 @@ import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
 import { Result } from "../Result";
-import { ResultStream } from "../ResultStream";
+import { ResultReadable } from "../ResultReadable";
 import { IOUsage } from "../stats/IOUsage";
 import { TimingInformation } from "../stats/TimingInformation";
 
@@ -67,12 +67,12 @@ mockCommunicator.fetchPage = async () => {
     };
 };
 
-let resultStream: ResultStream;
+let resultReadable: ResultReadable;
 
-describe("ResultStream", () => {
+describe("ResultReadable", () => {
 
     beforeEach(() => {
-        resultStream = new ResultStream(
+        resultReadable = new ResultReadable(
             testTransactionId,
             testExecuteStatementResult,
             mockCommunicator
@@ -85,49 +85,49 @@ describe("ResultStream", () => {
 
     describe("#constructor()", () => {
         it("should have all attributes equal to mock values when constructor called", () => {
-            chai.assert.equal(mockCommunicator, resultStream["_communicator"]);
-            chai.assert.equal(testPageWithToken, resultStream["_cachedPage"]);
-            chai.assert.equal(testTransactionId, resultStream["_txnId"]);
-            chai.assert.isTrue(resultStream["_shouldPushCachedPage"]);
-            chai.assert.equal(0, resultStream["_retrieveIndex"]);
-            chai.assert.equal(testIOUsage.getReadIOs(), resultStream["_readIOs"]);
-            chai.assert.equal(testTimingInfo.getProcessingTimeMilliseconds(), resultStream["_processingTime"]);
+            chai.assert.equal(mockCommunicator, resultReadable["_communicator"]);
+            chai.assert.equal(testPageWithToken, resultReadable["_cachedPage"]);
+            chai.assert.equal(testTransactionId, resultReadable["_txnId"]);
+            chai.assert.isTrue(resultReadable["_shouldPushCachedPage"]);
+            chai.assert.equal(0, resultReadable["_retrieveIndex"]);
+            chai.assert.equal(testIOUsage.getReadIOs(), resultReadable["_readIOs"]);
+            chai.assert.equal(testTimingInfo.getProcessingTimeMilliseconds(), resultReadable["_processingTime"]);
         });
     });
 
     describe("#_read()", () => {
         it("should call _pushPageValues() when called", () => {
-            resultStream["_pushPageValues"] = async (): Promise<void> => {
+            resultReadable["_pushPageValues"] = async (): Promise<void> => {
                 return;
             };
-            const _pushPageValuesSpy = sandbox.spy(resultStream as any, "_pushPageValues");
-            resultStream._read();
+            const _pushPageValuesSpy = sandbox.spy(resultReadable as any, "_pushPageValues");
+            resultReadable._read();
             sinon.assert.calledOnce(_pushPageValuesSpy);
-            chai.assert.isTrue(resultStream["_isPushingData"]);
+            chai.assert.isTrue(resultReadable["_isPushingData"]);
         });
 
         it("should return if _isPushingData is true", () => {
-            resultStream["_isPushingData"] = true;
-            const _pushPageValuesSpy = sandbox.spy(resultStream as any, "_pushPageValues");
-            resultStream._read();
+            resultReadable["_isPushingData"] = true;
+            const _pushPageValuesSpy = sandbox.spy(resultReadable as any, "_pushPageValues");
+            resultReadable._read();
             sinon.assert.notCalled(_pushPageValuesSpy);
         });
     });
 
     describe("#_pushPageValues()", () => {
         it("should fully push all pages when _shouldPushCachedPage is true and next token exists", async () => {
-            resultStream["_isPushingData"] = true;
-            const _readStub = sandbox.stub(resultStream as any, "_read");
+            resultReadable["_isPushingData"] = true;
+            const _readStub = sandbox.stub(resultReadable as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
             domLoadStub.onCall(1).returns(2);
             domLoadStub.returns(3);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             sinon.assert.calledThrice(pushStub);
@@ -135,22 +135,22 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(1), 2);
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledOnce(_readStub);
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
         });
 
         it("should fully push all pages when _shouldPushCachedPage is true and next token does not exist", async () => {
-            resultStream["_isPushingData"] = true;
-            resultStream["_cachedPage"] = testPage;
+            resultReadable["_isPushingData"] = true;
+            resultReadable["_cachedPage"] = testPage;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
             domLoadStub.onCall(1).returns(2);
             domLoadStub.returns(3);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             chai.assert.equal(pushStub.callCount, 4);
@@ -158,22 +158,22 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(1), 2);
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledWith(pushStub.getCall(3), null);
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
         });
 
         it("should fully push relevant pages when _shouldPushCachedPage is false and next token exists", async () => {
-            resultStream["_isPushingData"] = true;
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_isPushingData"] = true;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
             domLoadStub.onCall(1).returns(2);
             domLoadStub.returns(3);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.called(fetchPageSpy);
             chai.assert.equal(pushStub.callCount, 4);
@@ -181,12 +181,12 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(1), 2);
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledWith(pushStub.getCall(3), null);
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
         });
 
         it("should push cached page and rest of the pages when previous push failed", async () => {
-            resultStream["_isPushingData"] = true;
-            const _readStub = sandbox.stub(resultStream as any, "_read");
+            resultReadable["_isPushingData"] = true;
+            const _readStub = sandbox.stub(resultReadable as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
 
@@ -195,20 +195,20 @@ describe("ResultStream", () => {
             domLoadStub.onCall(1).returns(2);
             domLoadStub.onCall(2).returns(3);
             domLoadStub.returns(4);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.onCall(0).returns(true);
             pushStub.onCall(1).returns(false);
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.calledTwice(domLoadStub);
             sinon.assert.calledTwice(pushStub);
             sinon.assert.notCalled(_readStub);
-            chai.assert.isTrue(resultStream["_shouldPushCachedPage"]);
-            chai.assert.equal(2, resultStream["_retrieveIndex"]);
+            chai.assert.isTrue(resultReadable["_shouldPushCachedPage"]);
+            chai.assert.equal(2, resultReadable["_retrieveIndex"]);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             chai.assert.equal(pushStub.callCount, 3);
@@ -217,36 +217,36 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledOnce(_readStub);
 
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
         });
 
         it("should call destroy when fetching page causes exception", async () => {
-            resultStream["_isPushingData"] = true;
-            resultStream["_shouldPushCachedPage"] = false;
-            resultStream["_cachedPage"] = testPageWithToken;
+            resultReadable["_isPushingData"] = true;
+            resultReadable["_shouldPushCachedPage"] = false;
+            resultReadable["_cachedPage"] = testPageWithToken;
 
-            const destroyStub = sandbox.stub(resultStream, "destroy");
+            const destroyStub = sandbox.stub(resultReadable, "destroy");
             const fetchPageStub: sinon.SinonStub = sandbox.stub(mockCommunicator, "fetchPage");
             fetchPageStub.throws(new Error(testMessage));
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.calledOnce(destroyStub);
         });
 
         it("should set isPushingData to false after pushing data", async () => {
-            resultStream["_isPushingData"] = true;
-            const _readStub = sandbox.stub(resultStream as any, "_read");
+            resultReadable["_isPushingData"] = true;
+            const _readStub = sandbox.stub(resultReadable as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
             domLoadStub.onCall(1).returns(2);
             domLoadStub.returns(3);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             sinon.assert.calledThrice(pushStub);
@@ -254,20 +254,20 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(1), 2);
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledOnce(_readStub);
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
-            chai.assert.isFalse(resultStream["_isPushingData"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_isPushingData"]);
         });
 
         it("should not call _read if stream buffer is full", async () => {
-            const _readStub = sandbox.stub(resultStream as any, "_read");
+            const _readStub = sandbox.stub(resultReadable as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(false);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             sinon.assert.calledOnce(pushStub);
@@ -275,18 +275,18 @@ describe("ResultStream", () => {
             sinon.assert.notCalled(_readStub);
         });
 
-        it("should call _read if ResultStream is open and stream buffer has room after pushing data", async () => {
-            const _readStub = sandbox.stub(resultStream as any, "_read");
+        it("should call _read if ResultReadable is open and stream buffer has room after pushing data", async () => {
+            const _readStub = sandbox.stub(resultReadable as any, "_read");
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
             sandbox.stub(Result, "_handleBlob");
             const domLoadStub = sandbox.stub(dom as any, "load");
             domLoadStub.onCall(0).returns(1);
             domLoadStub.onCall(1).returns(2);
             domLoadStub.returns(3);
-            const pushStub = sandbox.stub(resultStream, "push");
+            const pushStub = sandbox.stub(resultReadable, "push");
             pushStub.returns(true);
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.notCalled(fetchPageSpy);
             sinon.assert.calledThrice(pushStub);
@@ -294,7 +294,7 @@ describe("ResultStream", () => {
             sinon.assert.calledWith(pushStub.getCall(1), 2);
             sinon.assert.calledWith(pushStub.getCall(2), 3);
             sinon.assert.calledOnce(_readStub);
-            chai.assert.isFalse(resultStream["_shouldPushCachedPage"]);
+            chai.assert.isFalse(resultReadable["_shouldPushCachedPage"]);
         });
     });
 
@@ -306,9 +306,9 @@ describe("ResultStream", () => {
                     ConsumedIOs: null
                 };
             };
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const ioUsage: IOUsage = resultStream.getConsumedIOs();
+            const ioUsage: IOUsage = resultReadable.getConsumedIOs();
             chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
             chai.expect(ioUsage.getReadIOs()).to.be.eq(testIOUsage.getReadIOs());
         });
@@ -318,19 +318,19 @@ describe("ResultStream", () => {
                 FirstPage: testPageWithToken,
                 ConsumedIOs: null
             };
-            resultStream = new ResultStream(
+            resultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
             );
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(resultStream.getConsumedIOs()).to.be.null;
+            chai.expect(resultReadable.getConsumedIOs()).to.be.null;
         });
 
         it("should return accumulated number of IOs of the first page and next pages", async () => {
@@ -345,12 +345,12 @@ describe("ResultStream", () => {
             };
             const expectedAccumulatedIOs: number = testIOUsage.getReadIOs() + nextPageConsumedIOs.ReadIOs;
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const ioUsage: IOUsage = resultStream.getConsumedIOs();
+            const ioUsage: IOUsage = resultReadable.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
             chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
@@ -362,7 +362,7 @@ describe("ResultStream", () => {
                 FirstPage: testPageWithToken,
                 ConsumedIOs: null
             };
-            resultStream = new ResultStream(
+            resultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
@@ -377,12 +377,12 @@ describe("ResultStream", () => {
                 };
             };
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const ioUsage: IOUsage = resultStream.getConsumedIOs();
+            const ioUsage: IOUsage = resultReadable.getConsumedIOs();
 
             sinon.assert.called(fetchPageSpy);
             chai.expect(ioUsage).to.be.an.instanceOf(IOUsage);
@@ -398,9 +398,9 @@ describe("ResultStream", () => {
                     TimingInformation: null
                 };
             };
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const timingInformation: TimingInformation = resultStream.getTimingInformation();
+            const timingInformation: TimingInformation = resultReadable.getTimingInformation();
             chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
             chai.expect(timingInformation.getProcessingTimeMilliseconds())
                 .to.be.eq(timingInformation.getProcessingTimeMilliseconds());
@@ -411,19 +411,19 @@ describe("ResultStream", () => {
                 FirstPage: testPageWithToken,
                 TimingInformation: null
             };
-            resultStream = new ResultStream(
+            resultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
             );
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
             sinon.assert.called(fetchPageSpy);
-            chai.expect(resultStream.getTimingInformation()).to.be.null;
+            chai.expect(resultReadable.getTimingInformation()).to.be.null;
         });
 
         it("should return accumulated processing time for the first page and next pages", async () => {
@@ -439,12 +439,12 @@ describe("ResultStream", () => {
             const expectedAccumulatedProcessingTime: number = testTimingInfo.getProcessingTimeMilliseconds() +
                 nextPageProcessingTime.ProcessingTimeMilliseconds;
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const timingInformation: TimingInformation = resultStream.getTimingInformation();
+            const timingInformation: TimingInformation = resultReadable.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
             chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);
@@ -456,7 +456,7 @@ describe("ResultStream", () => {
                 FirstPage: testPageWithToken,
                 TimingInformation: null
             };
-            resultStream = new ResultStream(
+            resultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteStatementResult,
                 mockCommunicator
@@ -471,12 +471,12 @@ describe("ResultStream", () => {
                 };
             };
 
-            resultStream["_shouldPushCachedPage"] = false;
+            resultReadable["_shouldPushCachedPage"] = false;
             const fetchPageSpy = sandbox.spy(mockCommunicator, "fetchPage");
 
-            await resultStream["_pushPageValues"]();
+            await resultReadable["_pushPageValues"]();
 
-            const timingInformation: TimingInformation = resultStream.getTimingInformation();
+            const timingInformation: TimingInformation = resultReadable.getTimingInformation();
 
             sinon.assert.called(fetchPageSpy);
             chai.expect(timingInformation).to.be.an.instanceOf(TimingInformation);

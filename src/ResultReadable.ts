@@ -29,7 +29,7 @@ import { TimingInformation } from "./stats/TimingInformation";
  * Extends Readable from the Node.JS Stream API interface.
  * The stream will always operate in object mode.
  */
-export class ResultStream extends Readable {
+export class ResultReadable extends Readable {
     private _communicator: Communicator;
     private _cachedPage: Page;
     private _txnId: string;
@@ -40,7 +40,7 @@ export class ResultStream extends Readable {
     private _processingTime: number;
 
     /**
-     * Create a ResultStream.
+     * Create a ResultReadable.
      * @param txnId The ID of the transaction the statement was executed in.
      * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
@@ -69,7 +69,7 @@ export class ResultStream extends Readable {
     }
 
     /**
-     * Returns server-side processing time for the executed statement. The statistics are stateful
+     * Returns server-side processing time for the executed statement. The statistics are stateful.
      * @returns TimingInformation, containing processing time.
      */
     getTimingInformation(): TimingInformation {
