@@ -32,7 +32,7 @@ import * as Errors from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
 import { QldbSession } from "../QldbSession";
 import { Result } from "../Result";
-import { ResultStream } from "../ResultStream";
+import { ResultReadable } from "../ResultReadable";
 import { BackoffFunction } from "../retry/BackoffFunction";
 import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { Transaction } from "../Transaction";
@@ -72,7 +72,7 @@ mockTransaction.getTransactionId = () => {
     return "mockTransactionId";
 };
 
-const resultStreamObject: ResultStream = new ResultStream(testTransactionId, testExecuteStatementResult, mockCommunicator);
+const resultReadableObject: ResultReadable = new ResultReadable(testTransactionId, testExecuteStatementResult, mockCommunicator);
 let qldbSession: QldbSession;
 let executionContext: TransactionExecutionContext;
 
@@ -151,14 +151,14 @@ describe("QldbSession", () => {
         });
 
         it("should return a Result object when called with executeAndStreamResults as the lambda", async () => {
-            const resultStub = sandbox.stub(Result, "bufferResultStream");
+            const resultStub = sandbox.stub(Result, "bufferResultReadable");
             resultStub.returns(Promise.resolve(mockResult));
 
             qldbSession.startTransaction = async () => {
                 return mockTransaction;
             };
             mockTransaction.executeAndStreamResults = async () => {
-                return resultStreamObject;
+                return resultReadableObject;
             };
             mockTransaction.commit = async () => {};
 

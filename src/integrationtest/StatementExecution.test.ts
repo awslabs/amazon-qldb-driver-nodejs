@@ -19,8 +19,10 @@ import { dom, IonType } from "ion-js";
 import { isOccConflictException } from "../errors/Errors";
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
+import { ResultReadable } from "../ResultReadable";
 import { RetryConfig } from "../retry/RetryConfig";
 import { IOUsage } from "../stats/IOUsage";
+import { TimingInformation } from "../stats/TimingInformation";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
@@ -224,26 +226,37 @@ describe("StatementExecution", function() {
         chai.assert.equal(searchCount, 0);
     });
 
-    it("Can return metrics for consumed IOs", async () => {
-        const struct1: Record<string, string> = {
-            [constants.COLUMN_NAME]: constants.MULTI_DOC_VALUE_1
-        };
-        const struct2: Record<string, string> = {
-            [constants.COLUMN_NAME]: constants.MULTI_DOC_VALUE_2
-        };
-        const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} <<?,?>>`;
-        let ioUsage: IOUsage = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct1, struct2)).getConsumedIOs();
+    it("Can return metrics for executes", async () => {
+        const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} << {'col': 1}, {'col': 2}, {'col': 3} >>`;
+        await driver.executeLambda(async (txn: TransactionExecutor) => {
+            await txn.execute(insertStatement);
         });
-        chai.assert.equal(ioUsage.getReadIOs(), 0);
 
-        const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
-            ` WHERE ${constants.COLUMN_NAME} IS NULL`;
-        ioUsage = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(searchQuery)).getConsumedIOs();
+        const searchQuery: string = `SELECT * FROM ${constants.TABLE_NAME} as a, ${constants.TABLE_NAME} as b, ${constants.TABLE_NAME}` +
+            ` as c, ${constants.TABLE_NAME} as d, ${constants.TABLE_NAME} as e, ${constants.TABLE_NAME} as f`;
+
+        // execute()
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchQuery);
         });
-        chai.assert.equal(ioUsage.getReadIOs(), 2);
 
+        chai.assert.isNotNull(result.getConsumedIOs());
+        chai.assert.isNotNull(result.getTimingInformation());
+        chai.assert.equal(result.getConsumedIOs().getReadIOs(), 1092);
+        chai.assert.isTrue(result.getTimingInformation().getProcessingTimeMilliseconds() > 0);
+
+        // executeAndStreamResults
+        await driver.executeLambda(async (txn: TransactionExecutor) => {
+            const resultReadable: ResultReadable = await txn.executeAndStreamResults(searchQuery);
+
+            const ioUsage: IOUsage = resultReadable.getConsumedIOs();
+            const timingInformation: TimingInformation = resultReadable.getTimingInformation();
+
+            chai.assert.isNotNull(ioUsage);
+            chai.assert.isNotNull(timingInformation);
+            chai.assert.isTrue(ioUsage.getReadIOs() > 0);
+            chai.assert.isTrue(timingInformation.getProcessingTimeMilliseconds() > 0);
+        });
     });
 
     it("Can delete all documents", async () => {

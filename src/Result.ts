@@ -22,7 +22,7 @@ import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
 import { ClientException } from "./errors/Errors"
-import { ResultStream } from "./ResultStream";
+import { ResultReadable } from "./ResultReadable";
 import { IOUsage } from "./stats/IOUsage";
 import { TimingInformation } from "./stats/TimingInformation";
 
@@ -63,13 +63,13 @@ export class Result {
     }
 
     /**
-     * Static method that creates a Result object by reading and buffering the contents of a ResultStream.
-     * @param resultStream A ResultStream object to convert to a Result object.
+     * Static method that creates a Result object by reading and buffering the contents of a ResultReadable.
+     * @param resultReadable A ResultReadable object to convert to a Result object.
      * @returns Promise which fulfills with a Result.
      */
-    static async bufferResultStream(resultStream: ResultStream): Promise<Result> {
-        const resultList: dom.Value[] = await Result._readResultStream(resultStream);
-        return new Result(resultList, resultStream.getConsumedIOs(), resultStream.getTimingInformation());
+    static async bufferResultReadable(resultReadable: ResultReadable): Promise<Result> {
+        const resultList: dom.Value[] = await Result._readResultReadable(resultReadable);
+        return new Result(resultList, resultReadable.getConsumedIOs(), resultReadable.getTimingInformation());
     }
 
     /**
@@ -166,14 +166,14 @@ export class Result {
     }
 
     /**
-     * Helper method that reads a ResultStream and extracts the results, placing them in an array of Ion values.
-     * @param resultStream The ResultStream to read.
+     * Helper method that reads a ResultReadable and extracts the results, placing them in an array of Ion values.
+     * @param resultReadable The ResultReadable to read.
      * @returns Promise which fulfills with a list of Ion values, representing all the returned values of the result set.
      */
-    private static async _readResultStream(resultStream: ResultStream): Promise<dom.Value[]> {
+    private static async _readResultReadable(resultReadable: ResultReadable): Promise<dom.Value[]> {
         return new Promise(res => {
             let ionValues: dom.Value[] = [];
-            resultStream.on("data", function(value) {
+            resultReadable.on("data", function(value) {
                 ionValues.push(value);
             }).on("end", function() {
                 res(ionValues);

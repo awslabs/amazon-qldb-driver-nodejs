@@ -30,7 +30,7 @@ import * as sinon from "sinon";
 import { Communicator } from "../Communicator";
 import { ClientException } from "../errors/Errors";
 import { Result } from "../Result";
-import { ResultStream } from "../ResultStream";
+import { ResultReadable } from "../ResultReadable";
 import { IOUsage } from "../stats/IOUsage";
 import { TimingInformation } from "../stats/TimingInformation";
 
@@ -86,14 +86,14 @@ describe("Result", () => {
         });
     });
 
-    describe("#bufferResultStream()", () => {
+    describe("#bufferResultReadable()", () => {
         it("should return a Result object when called", async () => {
-            const sampleResultStreamObject: ResultStream = new ResultStream(
+            const sampleResultReadableObject: ResultReadable = new ResultReadable(
                 testTransactionId,
                 testExecuteResult,
                 mockCommunicator
             );
-            const result = await Result.bufferResultStream(sampleResultStreamObject);
+            const result = await Result.bufferResultReadable(sampleResultReadableObject);
             chai.expect(result).to.be.an.instanceOf(Result);
         });
     });
@@ -251,7 +251,7 @@ describe("Result", () => {
             }
         });
 
-        it("should return a list of Ion values when Result object created with bufferResultStream()", async () => {
+        it("should return a list of Ion values when Result object created with bufferResultReadable()", async () => {
             const value1: ValueHolder = {IonBinary: "a"};
             const value2: ValueHolder = {IonBinary: "b"};
             const value3: ValueHolder = {IonBinary: "c"};
@@ -273,9 +273,9 @@ describe("Result", () => {
             const testExecuteResult: ExecuteStatementResult = {
                 FirstPage: testPage,
             };
-            const mockResultStream: ResultStream = new ResultStream(testTransactionId, testExecuteResult, mockCommunicator);
+            const mockResultReadable: ResultReadable = new ResultReadable(testTransactionId, testExecuteResult, mockCommunicator);
 
-            const result: Result = await Result.bufferResultStream(<ResultStream> mockResultStream);
+            const result: Result = await Result.bufferResultReadable(<ResultReadable> mockResultReadable);
             const resultList: dom.Value[] = result.getResultList();
 
             chai.assert.equal(values.length, resultList.length);
