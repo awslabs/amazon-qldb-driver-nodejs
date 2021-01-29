@@ -44,6 +44,7 @@
   "scripts": {
     "build": "npm run lint && tsc",
     "doc": "typedoc --out docs ./src --exclude **/*.test.ts",
+    "installAndPack": "npm install . && npm pack && rm $npm_package_name-$npm_package_version.tgz",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build",
     "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"strict\\\":false} mocha -r ts-node/register src/test/*.test.ts",
