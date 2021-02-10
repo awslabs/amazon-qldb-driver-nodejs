@@ -21,10 +21,13 @@ import {
     DescribeLedgerResponse,
     UpdateLedgerRequest
 } from "aws-sdk/clients/qldb";
-import { dom, load } from "ion-js";
+import { dom, IonType, load } from "ion-js";
 
 import * as mocharc from './.mocharc.json'
 import { isResourceNotFoundException } from "../errors/Errors";
+import { Result } from "../Result";
+import * as constants from "./TestConstants";
+import { TransactionExecutor } from "../TransactionExecutor";
 
 export class TestUtils {
     public ledgerName: string;
@@ -133,6 +136,22 @@ export class TestUtils {
             DeletionProtection: false
         }
         await this.qldbClient.updateLedger(request).promise();
+    }
+
+    async readIonValue(txn: TransactionExecutor, value: dom.Value): Promise<IonType> {
+        if (value.isNull()) {
+            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
+                ` WHERE ${constants.COLUMN_NAME} IS NULL`;
+            const result: Result = await txn.execute(searchQuery);
+            const resultSet: dom.Value[] = result.getResultList();
+            return resultSet[0].getType();
+        } else {
+            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
+                ` WHERE ${constants.COLUMN_NAME} = ?`;
+            const result: Result = await txn.execute(searchQuery, value);
+            const resultSet: dom.Value[] = result.getResultList();
+            return resultSet[0].getType();
+        }
     }
 
     static getIonTypes(): dom.Value[] {

@@ -327,78 +327,42 @@ describe("StatementExecution", function() {
     });
 
     itParam("Can insert and read different Ion types", TestUtils.getIonTypes(), async (value: dom.Value) => {
-        // Insert the Ion Value
         const struct: Record<string, dom.Value> = {
             [constants.COLUMN_NAME]: value
         };
 
-        const result: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+        await driver.executeLambda(async (txn: TransactionExecutor) => {
+            console.log(`Transaction ID of Insert Ion types test: ${txn.getTransactionId()}.`)
+            // Insert the Ion Value
+            const numberOfInsertedDocs: number = (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+            chai.assert.equal(numberOfInsertedDocs, 1);
+
+            // Read the Ion Value
+            const returnedValue: IonType = await testUtils.readIonValue(txn, value)
+            chai.assert.equal(returnedValue, value.getType());
         });
-        chai.assert.equal(result, 1);
-
-        // Read the Ion Value
-        if (value.isNull()) {
-            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` + 
-                ` WHERE ${constants.COLUMN_NAME} IS NULL`;
-            const returnedValue: IonType = await driver.executeLambda(async (txn: TransactionExecutor) => {
-                const result: Result = await txn.execute(searchQuery);
-                const resultSet: dom.Value[] = result.getResultList();
-                return resultSet[0].getType();
-            });
-            chai.assert.equal(returnedValue, value.getType());
-
-        } else {
-            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` + 
-            ` WHERE ${constants.COLUMN_NAME} = ?`;
-            const returnedValue: IonType = await driver.executeLambda(async (txn: TransactionExecutor) => {
-                const result: Result = await txn.execute(searchQuery, value);
-                const resultSet: dom.Value[] = result.getResultList();
-                return resultSet[0].getType();
-            });
-            chai.assert.equal(returnedValue, value.getType());
-        }
     });
 
     itParam("Can update different Ion types", TestUtils.getIonTypes(), async (value: dom.Value) => {
-        // Insert a base Ion Value
         const struct: Record<string, dom.Value> = {
             [constants.COLUMN_NAME]: dom.load("null")
         };
 
-        const result: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
-        });
-        chai.assert.equal(result, 1);
+        await driver.executeLambda(async (txn: TransactionExecutor) => {
+            console.log(`Transaction ID of update Ion types test: ${txn.getTransactionId()}.`)
+            // Insert a base Ion Value
+            const numberOfInsertedDocs: number = (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+            chai.assert.equal(numberOfInsertedDocs, 1);
 
-        // Update the Ion Value
-        const updateQuery: string = `UPDATE ${constants.TABLE_NAME} SET ${constants.COLUMN_NAME} = ?`;
-        const updateResult: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(updateQuery, value)).getResultList().length;
-        });
-        chai.assert.equal(updateResult, 1);
-        
-        // Read the Ion Value
-        if (value.isNull()) {
-            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` + 
-                ` WHERE ${constants.COLUMN_NAME} IS NULL`;
-            const returnedValue: IonType = await driver.executeLambda(async (txn: TransactionExecutor) => {
-                const result: Result = await txn.execute(searchQuery);
-                const resultSet: dom.Value[] = result.getResultList();
-                return resultSet[0].getType();
-            });
-            chai.assert.equal(returnedValue, value.getType());
+            // Update the Ion Value
+            const updateQuery: string = `UPDATE ${constants.TABLE_NAME} SET ${constants.COLUMN_NAME} = ?`;
+            const numberOfUpdatedDocs: number = (await txn.execute(updateQuery, value)).getResultList().length;
+            chai.assert.equal(numberOfUpdatedDocs, 1);
 
-        } else {
-            const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` + 
-                ` WHERE ${constants.COLUMN_NAME} = ?`;
-            const returnedValue: IonType = await driver.executeLambda(async (txn: TransactionExecutor) => {
-                const result: Result = await txn.execute(searchQuery, value);
-                const resultSet: dom.Value[] = result.getResultList();
-                return resultSet[0].getType();
-            });
+            // Read the Ion Value
+            const returnedValue: IonType = await testUtils.readIonValue(txn, value)
             chai.assert.equal(returnedValue, value.getType());
-        }
+        });
     });
 
     it("Statements are executed without needing a returned value", async () => {
@@ -410,7 +374,7 @@ describe("StatementExecution", function() {
             return (await txn.execute(insertStatement, struct)).getResultList().length;
         });
 
-        const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` + 
+        const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` +
             `${constants.COLUMN_NAME} = ?`;
         const value: string = await driver.executeLambda(async (txn: TransactionExecutor) => {
             return (await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE)).getResultList()[0].stringValue();
