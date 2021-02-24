@@ -190,8 +190,13 @@ export class Communicator {
      * @returns Promise which fulfills with a SendCommandResult object.
      */
     private async _sendCommand(request: SendCommandRequest): Promise<SendCommandResult> {
-        const result: SendCommandResult = await this._qldbClient.sendCommand(request).promise();
-        debug(`Received response: ${inspect(result, { depth: 2 })}`);
-        return result;
+        try {
+            const result = await this._qldbClient.sendCommand(request).promise();
+            debug(`Received response: ${inspect(result, { depth: 2 })}`);
+            return result;
+        } catch (e) {
+            warn(`Error sending a command: ${e}.`);
+            throw e;
+        }
     }
 }

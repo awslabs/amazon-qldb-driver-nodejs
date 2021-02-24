@@ -257,7 +257,7 @@ describe("Communicator", () => {
             };
             sinon.assert.calledTwice(sendCommandStub);
             sinon.assert.calledWith(sendCommandStub, testRequest);
-            sinon.assert.calledOnce(logSpy);
+            sinon.assert.calledTwice(logSpy);
         });
     });
 
