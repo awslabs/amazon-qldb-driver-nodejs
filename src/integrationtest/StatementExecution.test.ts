@@ -75,7 +75,7 @@ describe("StatementExecution", function() {
         chai.assert.equal(createTableCount, 1); 
 
         // List tables in ledger to ensure table is created
-        const firstListTablesResult: string[] = await driver.getTableNames()
+        const firstListTablesResult: string[] = await driver.getTableNames();
         chai.assert.isTrue(firstListTablesResult.includes(constants.CREATE_TABLE_NAME));
 
         // Drop table
@@ -88,7 +88,7 @@ describe("StatementExecution", function() {
         chai.assert.equal(dropTableCount, 1); 
 
         // List tables in ledger to ensure table is dropped
-        const secondListTablesResult: string[] = await driver.getTableNames()
+        const secondListTablesResult: string[] = await driver.getTableNames();
         chai.assert.isFalse(secondListTablesResult.includes(constants.CREATE_TABLE_NAME));
     });
 
@@ -109,8 +109,7 @@ describe("StatementExecution", function() {
         const createIndexStatement: string = `CREATE INDEX on ${constants.TABLE_NAME} (${constants.INDEX_ATTRIBUTE})`;
 
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            const result: Result = await txn.execute(createIndexStatement);
-            return result.getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(createIndexStatement));
         });
         chai.assert.equal(count, 1);
 
@@ -142,7 +141,7 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} ?`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct));
         });
         chai.assert.equal(count, 1);
 
@@ -160,7 +159,7 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} ?`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct));
         });
         chai.assert.equal(count, 1);
             
@@ -181,7 +180,7 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} <<?,?>>`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct1, struct2)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct1, struct2));
         });
         chai.assert.equal(count, 2);
 
@@ -204,13 +203,13 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} ?`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct));
         });
         chai.assert.equal(count, 1);
 
         const deleteStatement: string = `DELETE FROM ${constants.TABLE_NAME} WHERE ${constants.COLUMN_NAME} = ?`;
         const deleteCount: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(deleteStatement, constants.SINGLE_DOCUMENT_VALUE)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(deleteStatement, constants.SINGLE_DOCUMENT_VALUE));
         });
         chai.assert.equal(deleteCount, 1);
 
@@ -268,13 +267,13 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} <<?,?>>`;
         const count: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct1, struct2)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct1, struct2));
         });
         chai.assert.equal(count, 2);
 
         const deleteStatement: string = `DELETE FROM ${constants.TABLE_NAME}`;
         const deleteCount: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(deleteStatement)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(deleteStatement));
         });
         chai.assert.equal(deleteCount, 2);
 
@@ -295,7 +294,7 @@ describe("StatementExecution", function() {
         };
 
         const result: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct));
         });
         chai.assert.equal(result, 1);
         
@@ -332,14 +331,13 @@ describe("StatementExecution", function() {
         };
 
         await driver.executeLambda(async (txn: TransactionExecutor) => {
-            console.log(`Transaction ID of Insert Ion types test: ${txn.getTransactionId()}.`)
             // Insert the Ion Value
-            const numberOfInsertedDocs: number = (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+            const numberOfInsertedDocs: number = TestUtils.getLengthOfResultSet(await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct));
             chai.assert.equal(numberOfInsertedDocs, 1);
 
             // Read the Ion Value
-            const returnedValue: IonType = await testUtils.readIonValue(txn, value)
-            chai.assert.equal(returnedValue, value.getType());
+            const returnedValue: dom.Value = await testUtils.readIonValue(txn, value);
+            chai.assert.deepEqual(returnedValue, value);
         });
     });
 
@@ -349,19 +347,18 @@ describe("StatementExecution", function() {
         };
 
         await driver.executeLambda(async (txn: TransactionExecutor) => {
-            console.log(`Transaction ID of update Ion types test: ${txn.getTransactionId()}.`)
             // Insert a base Ion Value
-            const numberOfInsertedDocs: number = (await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct)).getResultList().length;
+            const numberOfInsertedDocs: number = TestUtils.getLengthOfResultSet(await txn.execute(`INSERT INTO ${constants.TABLE_NAME} ?`, struct));
             chai.assert.equal(numberOfInsertedDocs, 1);
 
             // Update the Ion Value
             const updateQuery: string = `UPDATE ${constants.TABLE_NAME} SET ${constants.COLUMN_NAME} = ?`;
-            const numberOfUpdatedDocs: number = (await txn.execute(updateQuery, value)).getResultList().length;
+            const numberOfUpdatedDocs: number = TestUtils.getLengthOfResultSet(await txn.execute(updateQuery, value));
             chai.assert.equal(numberOfUpdatedDocs, 1);
 
             // Read the Ion Value
-            const returnedValue: IonType = await testUtils.readIonValue(txn, value)
-            chai.assert.equal(returnedValue, value.getType());
+            const returnedValue: dom.Value = await testUtils.readIonValue(txn, value);
+            chai.assert.deepEqual(returnedValue, value);
         });
     });
 
@@ -371,7 +368,7 @@ describe("StatementExecution", function() {
         };
         const insertStatement: string = `INSERT INTO ${constants.TABLE_NAME} ?`;
         await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(insertStatement, struct)).getResultList().length;
+            return TestUtils.getLengthOfResultSet(await txn.execute(insertStatement, struct));
         });
 
         const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` +

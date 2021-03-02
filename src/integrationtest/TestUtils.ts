@@ -138,20 +138,22 @@ export class TestUtils {
         await this.qldbClient.updateLedger(request).promise();
     }
 
-    async readIonValue(txn: TransactionExecutor, value: dom.Value): Promise<IonType> {
+    async readIonValue(txn: TransactionExecutor, value: dom.Value): Promise<dom.Value> {
+        let result: Result;
         if (value.isNull()) {
             const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
                 ` WHERE ${constants.COLUMN_NAME} IS NULL`;
-            const result: Result = await txn.execute(searchQuery);
-            const resultSet: dom.Value[] = result.getResultList();
-            return resultSet[0].getType();
+            result = await txn.execute(searchQuery);
         } else {
             const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME}` +
                 ` WHERE ${constants.COLUMN_NAME} = ?`;
-            const result: Result = await txn.execute(searchQuery, value);
-            const resultSet: dom.Value[] = result.getResultList();
-            return resultSet[0].getType();
+            result = await txn.execute(searchQuery, value);
         }
+        return  result.getResultList()[0];
+    }
+
+    static getLengthOfResultSet(result: Result): number {
+        return result.getResultList().length;
     }
 
     static getIonTypes(): dom.Value[] {
