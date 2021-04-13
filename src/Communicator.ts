@@ -16,6 +16,7 @@ import {
     AbortTransactionResult,
     CommitDigest,
     CommitTransactionResult,
+    EndSessionResult,
     ExecuteStatementResult,
     FetchPageResult,
     PageToken,
@@ -34,18 +35,15 @@ import { debug, warn } from "./LogUtil";
  */
 export class Communicator {
     private _qldbClient: QLDBSession;
-    private _ledgerName: string;
     private _sessionToken: string;
 
     /**
      * Creates a Communicator.
      * @param qldbClient The low level service client.
-     * @param ledgerName The QLDB ledger name.
      * @param sessionToken The initial session token representing the session connection.
      */
-    private constructor(qldbClient: QLDBSession, ledgerName: string, sessionToken: string) {
+    private constructor(qldbClient: QLDBSession, sessionToken: string) {
         this._qldbClient = qldbClient;
-        this._ledgerName = ledgerName;
         this._sessionToken = sessionToken;
     }
 
@@ -62,7 +60,7 @@ export class Communicator {
             }
         };
         const result: SendCommandResult = await qldbClient.sendCommand(request).promise();
-        return new Communicator(qldbClient, ledgerName, result.StartSession.SessionToken);
+        return new Communicator(qldbClient, result.StartSession.SessionToken);
     }
 
     /**
@@ -122,19 +120,15 @@ export class Communicator {
 
     /**
      * Send request to end the independent session represented by the instance of this class.
-     * @returns Promise which fulfills with void.
+     * @returns Promise which fulfills with the end session response returned from QLDB.
      */
-    async endSession(): Promise<void> {
+    async endSession(): Promise<EndSessionResult> {
         const request: SendCommandRequest = {
             SessionToken: this._sessionToken,
             EndSession: {}
         };
-        try {
-            await this._sendCommand(request);
-        } catch (e) {
-            // We will only log issues ending the session, as QLDB will clean them after a timeout.
-            warn(`Errors ending session: ${e}.`);
-        }
+        const result: SendCommandResult = await this._sendCommand(request);
+        return result.EndSession;
     }
 
     /**

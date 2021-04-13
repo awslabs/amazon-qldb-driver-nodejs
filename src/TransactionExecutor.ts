@@ -15,13 +15,66 @@ import { LambdaAbortedError } from "./errors/Errors";
 import { Result } from "./Result";
 import { ResultReadable } from "./ResultReadable";
 import { Transaction } from "./Transaction";
-import { TransactionExecutable } from "./TransactionExecutable";
+
+/**
+ * Interface of available operations from a transaction during lambda execution.
+ */
+export interface TransactionExecutor {
+    /**
+     * Abort the transaction and roll back any changes.
+     * @throws {@linkcode LambdaAbortedError} when called.
+     */
+    abort(): void;
+
+    /**
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which eventually returns all the results loaded into memory.
+     *
+     * The PartiQL statement executed via this transaction is not immediately committed.
+     * The entire transaction will be committed once the all the code in `transactionFunction`
+     * (passed as an argument to {@link QldbDriver.executeLambda}) completes.
+     *
+     * @param statement The statement to execute.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with all results loaded into memory
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
+     */
+    execute(statement: string, ...parameters: any[]): Promise<Result>;
+
+    /**
+     * Execute the specified statement in the current transaction. This method returns a promise
+     * which fulfills with Readable interface, which allows you to stream one record at time
+     *
+     * The PartiQL statement executed via this transaction is not immediately committed.
+     * The entire transaction will be committed once the all the code in `transactionFunction`
+     * (passed as an argument to {@link QldbDriver.executeLambda}) completes.
+     *
+     * @param statement The statement to execute.
+     * @param parameters Variable number of arguments, where each argument corresponds to a
+     *                  placeholder (?) in the PartiQL query.
+     *                  The argument could be any native JavaScript type or an Ion DOM type.
+     *                  [Details of Ion DOM type and JavaScript type](https://github.com/amzn/ion-js/blob/master/src/dom/README.md#iondom-data-types)
+     * @returns Promise which fulfills with a Readable Stream
+     * @throws {@linkcode TransactionClosedError} when the transaction is closed.
+     * @throws [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) when the passed argument value cannot be converted into Ion
+     */
+    executeAndStreamResults(statement: string, ...parameters: any[]): Promise<ResultReadable>;
+
+    /**
+    * Get the transaction ID.
+    * @returns The transaction ID.
+    */
+    getTransactionId(): string;
+}
 
 /**
  * A class to handle lambda execution.
  */
-export class TransactionExecutor implements TransactionExecutable {
-    _transaction: Transaction;
+export class TransactionExecutorImpl {
+    private _transaction: Transaction;
 
     /**
      * Creates a TransactionExecutor.

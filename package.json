@@ -34,10 +34,10 @@
     "sinon": "^7.3.2",
     "ts-node": "^8.3.0",
     "typedoc": "^0.15.0",
-    "typescript": "^3.5.3"
+    "typescript": "^3.8.0"
   },
   "peerDependencies": {
-    "aws-sdk": "^2.815.0",
+    "aws-sdk": "^2.841.0",
     "ion-js": "^4.0.0",
     "jsbi": "^3.1.1"
   },

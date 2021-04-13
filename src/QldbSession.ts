@@ -9,139 +9,77 @@
  * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- */
+*/
 
 import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
 import { Communicator } from "./Communicator";
-import { BackoffFunction } from "./retry/BackoffFunction";
 import {
-    isBadRequestException,
+    ExecuteError,
     isInvalidSessionException,
     isOccConflictException,
     isRetriableException,
-    LambdaAbortedError,
-    StartTransactionError,
+    isTransactionExpiredException
 } from "./errors/Errors";
 import { warn } from "./LogUtil";
-import { Result } from "./Result";
-import { ResultReadable } from "./ResultReadable";
-import { RetryConfig } from "./retry/RetryConfig";
 import { Transaction } from "./Transaction";
-import { TransactionExecutor } from "./TransactionExecutor";
-import { TransactionExecutionContext } from "./TransactionExecutionContext";
+import { TransactionExecutor, TransactionExecutorImpl } from "./TransactionExecutor";
 
 export class QldbSession {
     private _communicator: Communicator;
-    private _isClosed: boolean;
+    private _isAlive: boolean;
 
     constructor(communicator: Communicator) {
         this._communicator = communicator;
-        this._isClosed = false;
+        this._isAlive = true;
     }
 
-    endSession(): void {
-        if (this._isClosed) {
-            return;
+    isAlive(): boolean {
+        return this._isAlive;
+    }
+
+    async endSession(): Promise<void> {
+        try {
+            this._isAlive = false;
+            await this._communicator.endSession();
+        } catch (e) {
+            // We will only log issues ending the session, as QLDB will clean them after a timeout.
+            warn(`Errors ending session: ${e}.`);
         }
-        this._isClosed = true;
-        this._communicator.endSession();
     }
 
-    closeSession(): void {
-        this._isClosed = true;
-    }
-
-    async executeLambda(
-        transactionLambda: (transactionExecutor: TransactionExecutor) => any,
-        retryConfig: RetryConfig,
-        executionContext: TransactionExecutionContext,
-    ): Promise<any> {
+    async executeLambda<Type>(
+        transactionLambda: (transactionExecutor: TransactionExecutor) => Promise<Type>
+    ): Promise<Type> {
         let transaction: Transaction;
-        while (true) {
-            transaction = null;
-            try {
-                transaction = await this.startTransaction();
-                const transactionExecutor = new TransactionExecutor(transaction);
-                let returnedValue: any = await transactionLambda(transactionExecutor);
-                if (returnedValue instanceof ResultReadable) {
-                    returnedValue = await Result.bufferResultReadable(returnedValue);
-                }
-                await transaction.commit();
-                return returnedValue;
-            } catch (e) {
-                executionContext.setLastException(e);
-                if (isInvalidSessionException(e)) {
-                    this.closeSession();
-                    throw e;
-                }
-
-                if (!isOccConflictException(e)) {
-                    this._noThrowAbort(transaction);
-                }
-
-                if (executionContext.getExecutionAttempt() >= retryConfig.getRetryLimit()) {
-                    throw e;
-                }
-
-                if (e instanceof StartTransactionError || isRetriableException(e) || isOccConflictException(e)) {
-                    warn(`OCC conflict or retriable exception occurred: ${e}.`);
-                } else {
-                    throw e;
-                }
-            }
-            executionContext.incrementExecutionAttempt();
-            await this._retrySleep(executionContext, retryConfig, transaction);
-        }
-    }
-
-
-    getSessionToken(): string {
-        return this._communicator.getSessionToken();
-    }
-
-    isSessionOpen(): Boolean {
-        return !this._isClosed;
-    }
-
-    async startTransaction(): Promise<Transaction> {
+        let transactionId: string = null;
         try {
             const startTransactionResult: StartTransactionResult = await this._communicator.startTransaction();
-            const transaction: Transaction = new Transaction(
-                this._communicator,
-                startTransactionResult.TransactionId
-            );
-            return transaction;
+            transaction = new Transaction(this._communicator, startTransactionResult.TransactionId);
+            transactionId = transaction.getTransactionId();
+            const executor: TransactionExecutorImpl = new TransactionExecutorImpl(transaction);
+            const returnedValue: Type = await transactionLambda(executor);
+            await transaction.commit();
+            return returnedValue;
         } catch (e) {
-            if (isBadRequestException(e)) {
-                throw new StartTransactionError(e);
+            const isRetriable: boolean = isRetriableException(e);
+            const isISE: boolean = isInvalidSessionException(e);
+            if (isISE && !isTransactionExpiredException(e)) {
+                // Underlying session is dead on InvalidSessionException except for transaction expiry
+                this._isAlive = false;
+            } else if (!isOccConflictException(e)) {
+                // OCC does not need session state reset as the transaction is implicitly closed
+                await this._tryAbort();
             }
-            throw e;
+            throw new ExecuteError(e, isRetriable, isISE, transactionId);
         }
     }
 
-    private async _noThrowAbort(transaction: Transaction): Promise<void> {
+    private async _tryAbort(): Promise<void> {
         try {
-            if (null == transaction) {
-                this._communicator.abortTransaction();
-            } else {
-                await transaction.abort();
-            }
+            await this._communicator.abortTransaction();
         } catch (e) {
             warn(`Ignored error while aborting transaction during execution: ${e}.`);
+            this._isAlive = false;
         }
-    }
-
-    private _retrySleep(executionContext: TransactionExecutionContext, retryConfig: RetryConfig, transaction: Transaction) {
-        let transactionId: string = (transaction != null) ? transaction.getTransactionId() : null;
-        const backoffFunction: BackoffFunction = retryConfig.getBackoffFunction();
-        let backoffDelay: number = backoffFunction(executionContext.getExecutionAttempt(), executionContext.getLastException(), transactionId);
-        if (backoffDelay == null || backoffDelay < 0) {
-            backoffDelay = 0;
-        }
-        return this._sleep(backoffDelay);
-    }
-
-    private _sleep(sleepTime: number) {
-        return new Promise(resolve => setTimeout(resolve, sleepTime));
     }
 }

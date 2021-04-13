@@ -22,16 +22,15 @@ import { Communicator } from "./Communicator";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import {
     DriverClosedError,
-    isInvalidSessionException,
-    isTransactionExpiredException,
+    ExecuteError,
     SessionPoolEmptyError,
  } from "./errors/Errors";
-import { debug } from "./LogUtil";
+import { debug, info } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
 import { Result } from "./Result";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
-import { TransactionExecutionContext } from "./TransactionExecutionContext";
+import { BackoffFunction } from "..";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
@@ -52,14 +51,13 @@ import { TransactionExecutionContext } from "./TransactionExecutionContext";
  */
 export class QldbDriver {
     private _maxConcurrentTransactions: number;
-    private _timeoutMillis: number;
     private _availablePermits: number;
     private _sessionPool: QldbSession[];
     private _semaphore: Semaphore;
-    protected _qldbClient: QLDBSession;
-    protected _ledgerName: string;
-    protected _isClosed: boolean;
-    protected _retryConfig: RetryConfig;
+    private _qldbClient: QLDBSession;
+    private _ledgerName: string;
+    private _isClosed: boolean;
+    private _retryConfig: RetryConfig;
 
     /**
      * Creates a QldbDriver instance that can be used to execute transactions against Amazon QLDB. A single instance of the QldbDriver
@@ -119,6 +117,21 @@ export class QldbDriver {
         this._semaphore = new Semaphore(this._maxConcurrentTransactions);
     }
 
+    /**
+     * This is a driver shutdown method which closes all the sessions and marks the driver as closed.
+     * Once the driver is closed, no transactions can be executed on that driver instance.
+     *
+     * Note: There is no corresponding `open` method and the only option is to instantiate another driver.
+     */
+     close(): void {
+        while (this._sessionPool.length > 0) {
+            const session: QldbSession = this._sessionPool.pop();
+            if (session != undefined) {
+                session.endSession();
+            }
+        }
+        this._isClosed = true;
+    }
 
     /**
      * This is the primary method to execute a transaction against Amazon QLDB ledger.
@@ -156,36 +169,95 @@ export class QldbDriver {
      * @throws {@linkcode InvalidSessionException} When a session expires either due to a long running transaction or session being idle for long time.
      * @throws {@linkcode BadRequestException} When Amazon QLDB is not able to execute a query or transaction.
      */
-    async executeLambda(
-        transactionLambda: (transactionExecutor: TransactionExecutor) => any,
+    async executeLambda<Type>(
+        transactionLambda: (transactionExecutor: TransactionExecutor) => Promise<Type>,
         retryConfig?: RetryConfig
-    ): Promise<any> {
-        let session: QldbSession = null;
-        retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
-        const transactionExecutionContext: TransactionExecutionContext = new TransactionExecutionContext();
-        let transactionExecutionAttempt: number = 0;
-        while(true) {
-            try  {
-                transactionExecutionAttempt += 1;
-                session = await this.getSession();
-                return await session.executeLambda(transactionLambda, retryConfig, transactionExecutionContext);
-            } catch(err) {
-                /* This is a guard condition to prevent the driver from entering an infinite loop
-                if all the sessions start resulting in InvalidSessionException
-                */
-                if (transactionExecutionAttempt >= this._maxConcurrentTransactions + 3) {
-                    throw err;
-                }
-                //If it is ISE but not because of transaction expiry, then pick new session and retry the transaction
-                if (isInvalidSessionException(err) && !isTransactionExpiredException(err) ) {
-                    continue;
+    ): Promise<Type> {
+        if (this._isClosed) {
+            throw new DriverClosedError();
+        }
+
+        // Acquire semaphore and get a session from the pool
+        const getSession: (thisDriver: QldbDriver, startNewSession: boolean) => Promise<QldbSession> = 
+            async function(thisDriver: QldbDriver, startNewSession: boolean): Promise<QldbSession> {
+                debug(
+                    `Getting session. Current free session count: ${thisDriver._sessionPool.length}. ` +
+                    `Currently available permit count: ${thisDriver._availablePermits}.`
+                );
+                if (thisDriver._semaphore.tryAcquire()) {
+                    thisDriver._availablePermits--;
+                    try {
+                        let session: QldbSession
+                        if (!startNewSession) {
+                            session = thisDriver._sessionPool.pop();
+                        }
+                        if (startNewSession || session == undefined) {
+                            debug("Creating a new session.");
+                            const communicator: Communicator = 
+                                await Communicator.create(thisDriver._qldbClient, thisDriver._ledgerName);
+                            session = new QldbSession(communicator);
+                        }
+                        return session;
+                    } catch (e) {
+                        // An error when failing to start a new session is always retriable
+                        throw new ExecuteError(e, true, true);
+                    }
                 } else {
-                    throw err;
+                    throw new SessionPoolEmptyError()
+                }
+            }
+
+        // Release semaphore and if the session is alive return it to the pool and return true
+        const releaseSession: (thisDriver: QldbDriver, session: QldbSession) => boolean = 
+            function(thisDriver: QldbDriver, session: QldbSession): boolean {
+                thisDriver._semaphore.release();
+                thisDriver._availablePermits++;
+                if (session != null && session.isAlive) {
+                    thisDriver._sessionPool.push(session);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        
+        retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
+        let session: QldbSession;
+        let startNewSession: boolean = true;
+        for (let retryAttempt: number = 1; true; retryAttempt++) {
+            try {
+                session = null;
+                session = await getSession(this, startNewSession);
+                return await session.executeLambda(transactionLambda);
+            } catch (e) {
+                if (e instanceof ExecuteError) {
+                    if (e.isRetriable) {
+                        // Always retry on the first attempt if failure was caused by a stale session in the pool 
+                        if (retryAttempt == 1 && e.isISE) {
+                            debug("Initial session received from pool invalid. Retrtying...");
+                            continue;
+                        }
+                        if (retryAttempt > retryConfig.getRetryLimit()) {
+                            throw e.cause;
+                        }
+
+                        const backoffFunction: BackoffFunction = retryConfig.getBackoffFunction();
+                        let backoffDelay: number = backoffFunction(retryAttempt, e.cause, e.transactionId);
+                        if (backoffDelay == null || backoffDelay < 0) {
+                            backoffDelay = 0;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+
+                        info(`A recoverable error has occured. Attempting retry #${retryAttempt}.`);
+                        debug(`Error cause: ${e.cause}`);
+                        continue;
+                    } else {
+                        throw e.cause;
+                    }
+                } else {
+                    throw e;
                 }
             } finally {
-                if (session != null) {
-                    this._returnSessionToPool(session);
-                }
+                startNewSession = !releaseSession(this, session);
             }
         }
     }
@@ -203,65 +275,5 @@ export class QldbDriver {
                 tableNameStruct.get("name").stringValue());
             return listOfTableNames;
         });
-    }
-
-    /**
-     * This is a driver shutdown method which closes all the sessions and marks the driver as closed.
-     * Once the driver is closed, no transactions can be executed on that driver instance.
-     *
-     * Note: There is no corresponding `open` method and the only option is to instantiate another driver.
-     */
-    close(): void {
-        this._sessionPool.forEach(session => {
-            session.endSession();
-        });
-        this._isClosed = true;
-    }
-
-    private async getSession(): Promise<QldbSession> {
-        this._throwIfClosed();
-        debug(
-            `Getting session. Current free session count: ${this._sessionPool.length}. ` +
-            `Currently available permit count: ${this._availablePermits}.`
-        );
-        const isPermitAcquired: boolean = this._semaphore.tryAcquire();
-        if (isPermitAcquired) {
-            this._availablePermits--;
-            try {
-                let session: QldbSession = this._sessionPool.pop();
-                if (session == undefined) {
-                    debug("Creating new pooled session.");
-                    session = <QldbSession> (await this._createSession());
-                }
-                return session;
-            } catch (e) {
-                this._semaphore.release();
-                this._availablePermits++;
-                throw e;
-            }
-        }
-        throw new SessionPoolEmptyError(this._timeoutMillis)
-    }
-
-    private _returnSessionToPool = (session: QldbSession): void => {
-        if (session.isSessionOpen()) {
-            this._sessionPool.push(session);
-        }
-        this._semaphore.release();
-        this._availablePermits++;
-        debug(`Session returned to pool; size is now ${this._sessionPool.length}.`);
-    };
-
-    private _throwIfClosed(): void {
-        if (this._isClosed) {
-            throw new DriverClosedError();
-        }
-    }
-
-    private async _createSession(): Promise<QldbSession> {
-        this._throwIfClosed();
-        debug("Creating a new session.");
-        const communicator: Communicator = await Communicator.create(this._qldbClient, this._ledgerName);
-        return new QldbSession(communicator);
     }
 }

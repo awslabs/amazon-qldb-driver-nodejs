@@ -49,19 +49,8 @@ export class LambdaAbortedError extends Error {
     }
 }
 
-export class SessionClosedError extends Error {
-    constructor() {
-        const message: string = "Cannot invoke methods on a closed QldbSession. Please create a new session and retry.";
-        super(message);
-        Object.setPrototypeOf(this, SessionClosedError.prototype)
-        this.message = message;
-        this.name = "SessionClosedError";
-        error(message);
-    }
-}
-
 export class SessionPoolEmptyError extends Error {
-    constructor(timeout: number) {
+    constructor() {
         const message: string =
             "Session pool is empty. Please close existing sessions first before retrying.";
         super(message);
@@ -72,39 +61,32 @@ export class SessionPoolEmptyError extends Error {
     }
 }
 
-export class TransactionClosedError extends Error {
-    constructor() {
-        const message: string =
-            "Cannot invoke methods on a closed Transaction. Please create a new transaction and retry.";
+export class ExecuteError extends Error {
+    cause: Error;
+    isRetriable: boolean;
+    isISE: boolean;
+    transactionId: string;
+
+    constructor(cause: Error, isRetriable: boolean, isISE: boolean, transactionId: string = null) {
+        const message: string = "Error containing the context of a failure during Execute.";
         super(message);
-        Object.setPrototypeOf(this, TransactionClosedError.prototype)
-        this.message = message;
-        this.name = "TransactionClosedError";
-        error(message);
+        Object.setPrototypeOf(this, ExecuteError.prototype)
+        this.cause = cause;
+        this.isRetriable = isRetriable;
+        this.isISE = isISE;
+        this.transactionId = transactionId;
     }
 }
 
-
-//CFR: This is exception should be used only by the driver to move to next session in pool 
-export class StartTransactionError extends Error {
-    public cause: Error;
-    constructor(e: Error) {
-        const message: string =
-            "Failed to start a transaction. Either another transaction is already open on this session or something else went wrong. Please retry the transaction.";
-        super(message);
-        Object.setPrototypeOf(this, StartTransactionError.prototype)
-        this.message = message;
-        this.name = "StartTransactionError";
-        this.cause = e;
-        error(message);
-    }
-}
 /**
  * Is the exception an InvalidParameterException?
  * @param e The client error caught.
  * @returns True if the exception is an InvalidParameterException. False otherwise.
  */
 export function isInvalidParameterException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "InvalidParameterException";
 }
 
@@ -114,6 +96,9 @@ export function isInvalidParameterException(e: AWSError): boolean {
  * @returns True if the exception is an InvalidSessionException. False otherwise.
  */
 export function isInvalidSessionException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "InvalidSessionException";
 }
 
@@ -124,6 +109,9 @@ export function isInvalidSessionException(e: AWSError): boolean {
  * @returns Whether or not the exception is is an InvalidSessionException due to transaction expiry.
  */
 export function isTransactionExpiredException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "InvalidSessionException" && transactionExpiredPattern.test(e.message);
 }
 
@@ -133,6 +121,9 @@ export function isTransactionExpiredException(e: AWSError): boolean {
  * @returns True if the exception is an OccConflictException. False otherwise.
  */
 export function isOccConflictException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "OccConflictException";
 }
 
@@ -142,6 +133,9 @@ export function isOccConflictException(e: AWSError): boolean {
  * @returns Whether or not the exception is a ResourceNotFoundException.
  */
 export function isResourceNotFoundException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "ResourceNotFoundException";
 }
 
@@ -151,6 +145,9 @@ export function isResourceNotFoundException(e: AWSError): boolean {
  * @returns Whether or not the exception is a ResourcePreconditionNotMetException.
  */
 export function isResourcePreconditionNotMetException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "ResourcePreconditionNotMetException";
 }
 
@@ -160,6 +157,9 @@ export function isResourcePreconditionNotMetException(e: AWSError): boolean {
  * @returns Whether or not the exception is a BadRequestException.
  */
 export function isBadRequestException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
     return e.code === "BadRequestException";
 }
 
@@ -169,6 +169,29 @@ export function isBadRequestException(e: AWSError): boolean {
  * @returns True if the exception is a retriable exception. False otherwise.
  */
 export function isRetriableException(e: AWSError): boolean {
+    if (!isAWSError(e)) {
+        return false;
+    }
+    return isRetriableStatusCode(e) || isOccConflictException(e) || 
+        (isInvalidSessionException(e) && !isTransactionExpiredException(e));
+}
+
+/**
+ * Safeguard for checking AWSError when catching it due to inability to instanceof check against the type.
+ * TODO: Revisit if https://github.com/aws/aws-sdk-js/issues/2611 is resolved.
+ * @param e The client error caught.
+ * @returns True if the exception can be used as an AWSError in the context of this package.
+ */
+function isAWSError(e: AWSError): boolean {
+    return (e.statusCode !== undefined && e.code !== undefined && e.message !== undefined);
+} 
+
+/**
+ * Does the error have a retriable code or status code?
+ * @param e The client error caught.
+ * @returns True if the exception has a retriable code.
+ */
+function isRetriableStatusCode(e: AWSError): boolean {
     return (e.statusCode === 500) ||
            (e.statusCode === 503) ||
            (e.code === "NoHttpResponseException") ||
