@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -18,6 +18,8 @@ import { version } from "../package.json";
 /**
  * Logs a debug level message.
  * @param line The message to be logged.
+ * 
+ * @internal
  */
 export function debug(line: string): void {
     if (isLoggerSet()) {
@@ -28,6 +30,8 @@ export function debug(line: string): void {
 /**
  * Logs an error level message.
  * @param line The message to be logged.
+ * 
+ * @internal
  */
 export function error(line: string): void {
     if (isLoggerSet()) {
@@ -38,6 +42,8 @@ export function error(line: string): void {
 /**
  * Logs an info level message.
  * @param line The message to be logged.
+ * 
+ * @internal
  */
 export function info(line: string): void {
     if (isLoggerSet()) {
@@ -48,13 +54,15 @@ export function info(line: string): void {
 /**
  * @returns A boolean indicating whether a logger has been set within the AWS SDK.
  */
-export function isLoggerSet(): boolean {
+function isLoggerSet(): boolean {
     return config.logger !== null;
 }
 
 /**
  * Logs a message.
  * @param line The message to be logged.
+ * 
+ * @internal
  */
 export function log(line: string): void {
     if (isLoggerSet()) {
@@ -65,6 +73,8 @@ export function log(line: string): void {
 /**
  * Logs a warning level message.
  * @param line The message to be logged.
+ * 
+ * @internal
  */
 export function warn(line: string): void {
     if (isLoggerSet()) {

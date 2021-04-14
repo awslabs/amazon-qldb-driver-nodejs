@@ -1,4 +1,8 @@
 export {
+    ClientError,
+    DriverClosedError,
+    LambdaAbortedError,
+    SessionPoolEmptyError,
     isBadRequestException,
     isInvalidParameterException,
     isInvalidSessionException,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -19,7 +19,6 @@ import Semaphore from "semaphore-async-await";
 
 import { version } from "../package.json";
 import { Communicator } from "./Communicator";
-import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import {
     DriverClosedError,
     ExecuteError,
@@ -28,9 +27,10 @@ import {
 import { debug, info } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
 import { Result } from "./Result";
+import { BackoffFunction } from "./retry/BackoffFunction";
+import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
-import { BackoffFunction } from "..";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.

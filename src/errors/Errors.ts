@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -17,10 +17,14 @@ import { error } from "../LogUtil";
 
 const transactionExpiredPattern = RegExp("Transaction .* has expired");
 
-export class ClientException extends Error {
+export class ClientError extends Error {
+
+    /**
+     * @internal
+     */
     constructor(message: string) {
         super(message);
-        Object.setPrototypeOf(this, ClientException.prototype)
+        Object.setPrototypeOf(this, ClientError.prototype)
         this.message = message;
         this.name = "ClientException";
         error(message);
@@ -28,6 +32,10 @@ export class ClientException extends Error {
 }
 
 export class DriverClosedError extends Error {
+
+    /**
+     * @internal
+     */
     constructor() {
         const message: string = "Cannot invoke methods on a closed driver. Please create a new driver and retry.";
         super(message);
@@ -39,6 +47,10 @@ export class DriverClosedError extends Error {
 }
 
 export class LambdaAbortedError extends Error {
+
+    /**
+     * @internal
+     */
     constructor() {
         const message: string = "Abort called. Halting execution of lambda function.";
         super(message);
@@ -50,6 +62,10 @@ export class LambdaAbortedError extends Error {
 }
 
 export class SessionPoolEmptyError extends Error {
+
+    /**
+     * @internal
+     */
     constructor() {
         const message: string =
             "Session pool is empty. Please close existing sessions first before retrying.";
@@ -61,6 +77,9 @@ export class SessionPoolEmptyError extends Error {
     }
 }
 
+/**
+ * @internal
+ */
 export class ExecuteError extends Error {
     cause: Error;
     isRetriable: boolean;
@@ -167,6 +186,8 @@ export function isBadRequestException(e: AWSError): boolean {
  * Is the exception a retriable exception?
  * @param e The client error caught.
  * @returns True if the exception is a retriable exception. False otherwise.
+ * 
+ * @internal
  */
 export function isRetriableException(e: AWSError): boolean {
     if (!isAWSError(e)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -32,6 +32,8 @@ import { debug, warn } from "./LogUtil";
 /**
  * A class representing an independent session to a QLDB ledger that handles endpoint requests. This class is used in
  * {@linkcode QldbDriver} and {@linkcode QldbSession}. This class is not meant to be used directly by developers.
+ * 
+ * @internal
  */
 export class Communicator {
     private _qldbClient: QLDBSession;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -16,7 +16,7 @@ import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
 
 import { Communicator } from "./Communicator";
-import { ClientException } from "./errors/Errors";
+import { ClientError } from "./errors/Errors";
 import { QldbHash } from "./QldbHash";
 import { Result } from "./Result";
 import { ResultReadable } from "./ResultReadable";
@@ -33,6 +33,8 @@ import { ResultReadable } from "./ResultReadable";
  *
  * When an OCC conflict occurs, the transaction is closed and must be handled manually by creating a new transaction
  * and re-executing the desired statements.
+ * 
+ * @internal
  */
 export class Transaction {
     private _communicator: Communicator;
@@ -65,7 +67,7 @@ export class Transaction {
                 this._txnHash.getQldbHash()
             );
             if (toBase64(this._txnHash.getQldbHash()) !== toBase64(<Uint8Array>(commitTxnResult.CommitDigest))) {
-                throw new ClientException(
+                throw new ClientError(
                     `Transaction's commit digest did not match returned value from QLDB.
                     Please retry with a new transaction. Transaction ID: ${this._txnId}.`
                 );

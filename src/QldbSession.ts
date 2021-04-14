@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -9,9 +9,10 @@
  * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
-*/
+ */
 
 import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
+
 import { Communicator } from "./Communicator";
 import {
     ExecuteError,
@@ -22,8 +23,11 @@ import {
 } from "./errors/Errors";
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
-import { TransactionExecutor, TransactionExecutorImpl } from "./TransactionExecutor";
+import { TransactionExecutor } from "./TransactionExecutor";
 
+/**
+ * @internal
+ */
 export class QldbSession {
     private _communicator: Communicator;
     private _isAlive: boolean;
@@ -56,7 +60,7 @@ export class QldbSession {
             const startTransactionResult: StartTransactionResult = await this._communicator.startTransaction();
             transaction = new Transaction(this._communicator, startTransactionResult.TransactionId);
             transactionId = transaction.getTransactionId();
-            const executor: TransactionExecutorImpl = new TransactionExecutorImpl(transaction);
+            const executor: TransactionExecutor = new TransactionExecutor(transaction);
             const returnedValue: Type = await transactionLambda(executor);
             await transaction.commit();
             return returnedValue;

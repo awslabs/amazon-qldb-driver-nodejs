@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -21,7 +21,7 @@ import {
 import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
-import { ClientException } from "./errors/Errors"
+import { ClientError } from "./errors/Errors"
 import { ResultReadable } from "./ResultReadable";
 import { IOUsage } from "./stats/IOUsage";
 import { TimingInformation } from "./stats/TimingInformation";
@@ -52,6 +52,8 @@ export class Result {
      * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
      * @returns Promise which fulfills with a Result.
+     * 
+     * @internal
      */
     static async create(
         txnId: string,
@@ -102,6 +104,8 @@ export class Result {
      * @returns The IonBinary value cast explicitly to one of the types that make up the IonBinary type. This will be
      *          either Buffer, Uint8Array, or string.
      * @throws {@linkcode ClientException} when the specific type of the IonBinary value is Blob.
+     * 
+     * @internal
      */
     static _handleBlob(ionBinary: IonBinary): Buffer|Uint8Array|string {
         if (ionBinary instanceof Buffer) {
@@ -113,7 +117,7 @@ export class Result {
         if (typeof ionBinary === "string") {
             return <string> ionBinary;
         }
-        throw new ClientException("Unexpected Blob returned from QLDB.");
+        throw new ClientError("Unexpected Blob returned from QLDB.");
     }
 
     /**
