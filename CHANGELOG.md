@@ -1,3 +1,44 @@
+# 2.2.0
+This release is focused on improving the retry logic, optimizing it and handling more possible failures, as well as more 
+strictly defining the API to help prevent misuse. These changes are potentially breaking if the driver is being used in 
+a way that isn't supported by the documentation.
+
+## :tada: Enhancements
+* Improved retry logic
+   * Failures when starting a new session are now retried.
+   * Dead sessions are immediately discarded, reducing latency when using the driver.
+   * `ClientError`, `DriverClosedError`, `LambdaAbortedError`, and `SessionPoolEmptyError` are now exported.
+   * Peer dependency `aws-sdk` bumped to `2.841.0` or greater, which gives visibility to `CapacityExceededException`.
+
+## :warning: API Clean-up 
+
+These changes either remove unintentionally exported modules or remove the use of `any`. Updating to 2.2.0 should not break any documented usage of the driver and should not require code changes. If something is now incompatible and it's believed that it should be, please open an issue.
+
+* TypeScript: updated `executeLambda` signature
+
+  * ```typescript
+    // Old
+    async ExecuteLambda(transactionLambda: (transactionExecutor: TransactionExecutor) => any, 
+        retryConfig?: RetryConfig): Promise<any>;
+    // New
+    async ExecuteLambda<Type>(transactionLambda: (transactionExecutor: TransactionExecutor) => Promise<Type>,
+        retryConfig?: RetryConfig): Promise<Type>;
+    ```
+
+  * The returned value from the `transactionLambda` is what `ExecuteLambda` returns, so it's now strictly defined by the `Type`.
+
+  * The `transactionLambda` must return a `Promise`, as any methods called on the `TransactionExecutor` must be awaited for the driver to properly function.
+
+* JavaScript: removed `QldbDriver.getSession()`
+
+  * This is unavailable to TypeScript users and was not intended to be called directly by JavaScript users.
+
+* Module exports
+
+  * Removed `Transaction` from the exports list.
+  * Removed modules being accessible when importing from `amazon-qldb-driver-nodejs/src`.
+  * TypeScript: Removed constructors in the API for some exported types.
+
 # 2.1.1
 * Export `ResultReadable`.
 * Change the return type of `executeAndStreamResults()` from `Readable` to `ResultReadable` which extends `Readable`.
@@ -117,4 +158,3 @@ Please check the [release notes](http://github.com/awslabs/amazon-qldb-driver-no
 # 0.1.0-preview.1 (2019-11-08)
 
 * Preview release of the driver.
-
