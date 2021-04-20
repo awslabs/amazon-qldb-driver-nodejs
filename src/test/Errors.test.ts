@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -20,7 +20,7 @@ import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
 
 import {
-    ClientException,
+    ClientError,
     DriverClosedError,
     isInvalidParameterException,
     isInvalidSessionException,
@@ -29,10 +29,7 @@ import {
     isResourcePreconditionNotMetException,
     isRetriableException,
     LambdaAbortedError,
-    SessionClosedError,
     SessionPoolEmptyError,
-    TransactionClosedError,
-    StartTransactionError,
     isTransactionExpiredException,
     isBadRequestException
 } from "../errors/Errors";
@@ -52,12 +49,12 @@ describe("Errors", () => {
         sandbox.restore();
     });
 
-    describe("#ClientException", () => {
-        it("should be a ClientException when new ClientException created", () => {
+    describe("#ClientError", () => {
+        it("should be a ClientError when new ClientError created", () => {
             const logSpy = sandbox.spy(LogUtil, "error");
-            const error = new ClientException(testMessage);
-            chai.expect(error).to.be.instanceOf(ClientException);
-            chai.assert.equal(error.name, "ClientException");
+            const error = new ClientError(testMessage);
+            chai.expect(error).to.be.instanceOf(ClientError);
+            chai.assert.equal(error.name, "ClientError");
             chai.assert.equal(error.message, testMessage);
             sinon.assert.calledOnce(logSpy);
         });
@@ -83,47 +80,16 @@ describe("Errors", () => {
         });
     });
 
-    describe("#SessionClosedError", () => {
-        it("should be a SessionClosedError when new SessionClosedError created", () => {
-            const logSpy = sandbox.spy(LogUtil, "error");
-            const error = new SessionClosedError();
-            chai.expect(error).to.be.instanceOf(SessionClosedError);
-            chai.assert.equal(error.name, "SessionClosedError");
-            sinon.assert.calledOnce(logSpy);
-        });
-    });
-
     describe("#SessionPoolEmptyError", () => {
         it("should be a SessionPoolEmptyError when new SessionPoolEmptyError created", () => {
             const logSpy = sandbox.spy(LogUtil, "error");
-            const error = new SessionPoolEmptyError(1);
+            const error = new SessionPoolEmptyError();
             chai.expect(error).to.be.instanceOf(SessionPoolEmptyError);
             chai.assert.equal(error.name, "SessionPoolEmptyError");
             sinon.assert.calledOnce(logSpy);
         });
     });
 
-    describe("#TransactionClosedError", () => {
-        it("should be a TransactionClosedError when new TransactionClosedError created", () => {
-            const logSpy = sandbox.spy(LogUtil, "error");
-            const error = new TransactionClosedError();
-            chai.expect(error).to.be.instanceOf(TransactionClosedError);
-            chai.assert.equal(error.name, "TransactionClosedError");
-            sinon.assert.calledOnce(logSpy);
-        });
-    });
-
-    describe("#StartTransactionError", () => {
-        it("should be a StartTransactionError when new StartTransactionError created", () => {
-            const logSpy = sandbox.spy(LogUtil, "error");
-            let badRequestException: Error = new Error("Some BadRequest Exception")
-            const error = new StartTransactionError(badRequestException);
-            chai.expect(error).to.be.instanceOf(StartTransactionError);
-            chai.assert.equal(error.name, "StartTransactionError");
-            sinon.assert.calledOnce(logSpy);
-            chai.assert.equal(error.cause, badRequestException);
-        });
-    });
     describe("#isInvalidParameterException()", () => {
         it("should return true when error is an InvalidParameterException", () => {
             mockError.code = "InvalidParameterException";

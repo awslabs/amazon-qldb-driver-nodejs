@@ -25,7 +25,7 @@ import { ResultReadable } from "./ResultReadable";
  * A class representing a QLDB transaction.
  *
  * Every transaction is tied to a parent QldbSession, meaning that if the parent session is closed or invalidated, the 
- * child transaction is automatically closed and cannot be used. Only one transaction can be active at  any given time 
+ * child transaction is automatically closed and cannot be used. Only one transaction can be active at any given time 
  * per parent session.
  *
  * Any unexpected errors that occur within a transaction should not be retried using the same transaction, as the state

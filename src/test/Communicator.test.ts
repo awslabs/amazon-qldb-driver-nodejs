@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -97,7 +97,6 @@ describe("Communicator", () => {
     describe("#create()", () => {
         it("should have all attributes equal to mock values when static factory method called", async () => {
             chai.assert.equal(communicator["_qldbClient"], testQldbLowLevelClient);
-            chai.assert.equal(communicator["_ledgerName"], testLedgerName);
             chai.assert.equal(communicator["_sessionToken"], testSessionToken);
         });
 
@@ -243,21 +242,19 @@ describe("Communicator", () => {
             sinon.assert.calledWith(sendCommandStub, testRequest);
         });
 
-        it("should log a warning when error thrown", async () => {
+        it("should return a rejected promise when error is thrown", async () => {
             sendCommandStub.returns({
                 promise: () => {
                     throw new Error(testMessage);
                 }
             });
-            const logSpy = sandbox.spy(LogUtil, "warn");
-            await communicator.endSession();
             const testRequest: SendCommandRequest = {
                 EndSession: {},
                 SessionToken: testSessionToken
             };
+            await chai.expect(communicator.endSession()).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
             sinon.assert.calledWith(sendCommandStub, testRequest);
-            sinon.assert.calledTwice(logSpy);
         });
     });
 

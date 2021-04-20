@@ -15,12 +15,12 @@ from the ~/.aws/config file.
 
 See [Setting Region](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-region.html) page for more information.
 
-### TypeScript 3.5.x
+### TypeScript 3.8.x
 
-The driver is written in, and requires, TypeScript 3.5.x. It will be automatically installed as a dependency. 
-Please see the link below for more detail on TypeScript 3.5.x:
+The driver is written in, and requires, TypeScript 3.8.x. It will be automatically installed as a dependency. 
+Please see the link below for more detail on TypeScript 3.8.x:
 
-* [TypeScript 3.5.x](https://www.npmjs.com/package/typescript)
+* [TypeScript 3.8.x](https://www.npmjs.com/package/typescript)
 
 
 

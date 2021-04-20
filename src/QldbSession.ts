@@ -57,8 +57,7 @@ export class QldbSession {
         let transaction: Transaction;
         let transactionId: string = null;
         try {
-            const startTransactionResult: StartTransactionResult = await this._communicator.startTransaction();
-            transaction = new Transaction(this._communicator, startTransactionResult.TransactionId);
+            transaction = await this._startTransaction();
             transactionId = transaction.getTransactionId();
             const executor: TransactionExecutor = new TransactionExecutor(transaction);
             const returnedValue: Type = await transactionLambda(executor);
@@ -76,6 +75,11 @@ export class QldbSession {
             }
             throw new ExecuteError(e, isRetriable, isISE, transactionId);
         }
+    }
+
+    async _startTransaction(): Promise<Transaction> {
+        const startTransactionResult: StartTransactionResult = await this._communicator.startTransaction();
+        return new Transaction(this._communicator, startTransactionResult.TransactionId);
     }
 
     private async _tryAbort(): Promise<void> {

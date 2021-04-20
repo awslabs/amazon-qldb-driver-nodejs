@@ -26,7 +26,7 @@ export class ClientError extends Error {
         super(message);
         Object.setPrototypeOf(this, ClientError.prototype)
         this.message = message;
-        this.name = "ClientException";
+        this.name = "ClientError";
         error(message);
     }
 }
@@ -103,9 +103,6 @@ export class ExecuteError extends Error {
  * @returns True if the exception is an InvalidParameterException. False otherwise.
  */
 export function isInvalidParameterException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "InvalidParameterException";
 }
 
@@ -115,9 +112,6 @@ export function isInvalidParameterException(e: AWSError): boolean {
  * @returns True if the exception is an InvalidSessionException. False otherwise.
  */
 export function isInvalidSessionException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "InvalidSessionException";
 }
 
@@ -128,9 +122,6 @@ export function isInvalidSessionException(e: AWSError): boolean {
  * @returns Whether or not the exception is is an InvalidSessionException due to transaction expiry.
  */
 export function isTransactionExpiredException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "InvalidSessionException" && transactionExpiredPattern.test(e.message);
 }
 
@@ -140,9 +131,6 @@ export function isTransactionExpiredException(e: AWSError): boolean {
  * @returns True if the exception is an OccConflictException. False otherwise.
  */
 export function isOccConflictException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "OccConflictException";
 }
 
@@ -152,9 +140,6 @@ export function isOccConflictException(e: AWSError): boolean {
  * @returns Whether or not the exception is a ResourceNotFoundException.
  */
 export function isResourceNotFoundException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "ResourceNotFoundException";
 }
 
@@ -164,9 +149,6 @@ export function isResourceNotFoundException(e: AWSError): boolean {
  * @returns Whether or not the exception is a ResourcePreconditionNotMetException.
  */
 export function isResourcePreconditionNotMetException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "ResourcePreconditionNotMetException";
 }
 
@@ -176,9 +158,6 @@ export function isResourcePreconditionNotMetException(e: AWSError): boolean {
  * @returns Whether or not the exception is a BadRequestException.
  */
 export function isBadRequestException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return e.code === "BadRequestException";
 }
 
@@ -190,22 +169,9 @@ export function isBadRequestException(e: AWSError): boolean {
  * @internal
  */
 export function isRetriableException(e: AWSError): boolean {
-    if (!isAWSError(e)) {
-        return false;
-    }
     return isRetriableStatusCode(e) || isOccConflictException(e) || 
         (isInvalidSessionException(e) && !isTransactionExpiredException(e));
 }
-
-/**
- * Safeguard for checking AWSError when catching it due to inability to instanceof check against the type.
- * TODO: Revisit if https://github.com/aws/aws-sdk-js/issues/2611 is resolved.
- * @param e The client error caught.
- * @returns True if the exception can be used as an AWSError in the context of this package.
- */
-function isAWSError(e: AWSError): boolean {
-    return (e.statusCode !== undefined && e.code !== undefined && e.message !== undefined);
-} 
 
 /**
  * Does the error have a retriable code or status code?

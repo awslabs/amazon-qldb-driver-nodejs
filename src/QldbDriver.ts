@@ -212,7 +212,7 @@ export class QldbDriver {
             function(thisDriver: QldbDriver, session: QldbSession): boolean {
                 thisDriver._semaphore.release();
                 thisDriver._availablePermits++;
-                if (session != null && session.isAlive) {
+                if (session != null && session.isAlive()) {
                     thisDriver._sessionPool.push(session);
                     return true;
                 } else {
@@ -222,7 +222,7 @@ export class QldbDriver {
         
         retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
         let session: QldbSession;
-        let startNewSession: boolean = true;
+        let startNewSession: boolean = false;
         for (let retryAttempt: number = 1; true; retryAttempt++) {
             try {
                 session = null;
@@ -233,7 +233,7 @@ export class QldbDriver {
                     if (e.isRetriable) {
                         // Always retry on the first attempt if failure was caused by a stale session in the pool 
                         if (retryAttempt == 1 && e.isISE) {
-                            debug("Initial session received from pool invalid. Retrtying...");
+                            debug("Initial session received from pool is invalid. Retrtying...");
                             continue;
                         }
                         if (retryAttempt > retryConfig.getRetryLimit()) {
