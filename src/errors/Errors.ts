@@ -83,16 +83,16 @@ export class SessionPoolEmptyError extends Error {
 export class ExecuteError extends Error {
     cause: Error;
     isRetriable: boolean;
-    isISE: boolean;
+    isInvalidSessionException: boolean;
     transactionId: string;
 
-    constructor(cause: Error, isRetriable: boolean, isISE: boolean, transactionId: string = null) {
+    constructor(cause: Error, isRetriable: boolean, isInvalidSessionException: boolean, transactionId: string = null) {
         const message: string = "Error containing the context of a failure during Execute.";
         super(message);
         Object.setPrototypeOf(this, ExecuteError.prototype)
         this.cause = cause;
         this.isRetriable = isRetriable;
-        this.isISE = isISE;
+        this.isInvalidSessionException = isInvalidSessionException;
         this.transactionId = transactionId;
     }
 }

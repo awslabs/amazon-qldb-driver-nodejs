@@ -71,7 +71,7 @@ export class QldbSession {
                 this._isAlive = false;
             } else if (!isOccConflictException(e)) {
                 // OCC does not need session state reset as the transaction is implicitly closed
-                await this._tryAbort();
+                await this._cleanSessionState();
             }
             throw new ExecuteError(e, isRetriable, isISE, transactionId);
         }
@@ -82,7 +82,7 @@ export class QldbSession {
         return new Transaction(this._communicator, startTransactionResult.TransactionId);
     }
 
-    private async _tryAbort(): Promise<void> {
+    private async _cleanSessionState(): Promise<void> {
         try {
             await this._communicator.abortTransaction();
         } catch (e) {

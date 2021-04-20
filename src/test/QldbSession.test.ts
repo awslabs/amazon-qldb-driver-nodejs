@@ -276,10 +276,10 @@ describe("QldbSession", () => {
         });
     });
 
-    describe("#_tryAbort()", () => {
+    describe("#_cleanSessionState()", () => {
         it("should call abortTransaction()", async () => {
             const communicatorAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            await qldbSession["_tryAbort"]();
+            await qldbSession["_cleanSessionState"]();
             sinon.assert.calledOnce(communicatorAbortSpy);
         });
 
@@ -287,7 +287,7 @@ describe("QldbSession", () => {
             const communicatorAbortStub = sandbox.stub(mockCommunicator, "abortTransaction");
             communicatorAbortStub.throws(new Error("testError"));
             const logSpy = sandbox.spy(LogUtil, "warn");
-            await qldbSession["_tryAbort"]();
+            await qldbSession["_cleanSessionState"]();
             sinon.assert.calledOnce(communicatorAbortStub);
             sinon.assert.calledOnce(logSpy);
             chai.assert.isFalse(qldbSession.isAlive());
