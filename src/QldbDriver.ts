@@ -245,7 +245,7 @@ export class QldbDriver {
                         }
                         await new Promise(resolve => setTimeout(resolve, backoffDelay));
 
-                        info(`A recoverable error has occured. Attempting retry #${retryAttempt}.`);
+                        info(`A recoverable error has occurred. Attempting retry #${retryAttempt}.`);
                         debug(`Error cause: ${e.cause}`);
                         continue;
                     } else {
