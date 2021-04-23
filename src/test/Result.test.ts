@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -28,7 +28,7 @@ import { dom, IonType, IonTypes} from "ion-js";
 import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
-import { ClientException } from "../errors/Errors";
+import { ClientError } from "../errors/Errors";
 import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
 import { IOUsage } from "../stats/IOUsage";
@@ -477,7 +477,7 @@ describe("Result", () => {
             const invalidBlob: IonBinary = 123;
             chai.expect(() => {
                 Result["_handleBlob"](invalidBlob);
-            }).to.throw(ClientException);
+            }).to.throw(ClientError);
         });
     });
 

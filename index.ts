@@ -1,4 +1,8 @@
 export {
+    ClientError,
+    DriverClosedError,
+    LambdaAbortedError,
+    SessionPoolEmptyError,
     isBadRequestException,
     isInvalidParameterException,
     isInvalidSessionException,
@@ -10,7 +14,6 @@ export {
 export { QldbDriver } from "./src/QldbDriver";
 export { Result } from "./src/Result";
 export { ResultReadable } from "./src/ResultReadable";
-export { Transaction } from "./src/Transaction";
 export { TransactionExecutor } from "./src/TransactionExecutor";
 export { RetryConfig } from "./src/retry/RetryConfig";
 export { IOUsage } from "./src/stats/IOUsage";

@@ -20,6 +20,8 @@ export class IOUsage {
     /**
      * Creates an IOUsage.
      * @param readIOs The number of Read IOs.
+     * 
+     * @internal
      */
     constructor(readIOs: number) {
         this._readIOs = readIOs;

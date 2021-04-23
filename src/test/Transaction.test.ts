@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -83,53 +83,15 @@ describe("Transaction", () => {
         it("should have all attributes equal to mock values when constructor called", () => {
             chai.assert.equal(transaction["_communicator"], mockCommunicator);
             chai.assert.equal(transaction["_txnId"], testTransactionId);
-            chai.assert.equal(transaction["_isClosed"], false);
             chai.assert.deepEqual(transaction["_txnHash"], QldbHash.toQldbHash(testTransactionId));
             chai.expect(transaction["_hashLock"]).to.be.an.instanceOf(Lock);
-        });
-    });
-
-    describe("#abort()", () => {
-        it("should call Communicator's abortTransaction() once when called", async () => {
-            const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            const transactionInternalCloseSpy = sandbox.spy(transaction as any, "_internalClose");
-            await transaction.abort();
-            await transaction.abort();
-            sinon.assert.calledOnce(abortSpy);
-            sinon.assert.calledOnce(transactionInternalCloseSpy);
-        });
-
-        it("should return a rejected promise when error is thrown", async () => {
-            mockCommunicator.abortTransaction = async () => {
-                throw new Error(testMessage);
-            };
-            const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            await chai.expect(transaction.abort()).to.be.rejected;
-            sinon.assert.calledOnce(abortSpy);
-        });
-
-        it("should be a no-op when called after commit() was called", async () => {
-            const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            await transaction.commit();
-            // This should be a no-op.
-            await transaction.abort();
-            sinon.assert.notCalled(abortSpy);
         });
     });
 
     describe("#commit()", () => {
         it("should call Communicator's commit() when called", async () => {
             const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            const transactionInternalCloseSpy = sandbox.spy(transaction as any, "_internalClose");
             await transaction.commit();
-            sinon.assert.calledOnce(commitSpy);
-            sinon.assert.calledOnce(transactionInternalCloseSpy);
-        });
-
-        it("should return a rejected promise when commit() was already called", async () => {
-            const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            await transaction.commit();
-            await chai.expect(transaction.commit()).to.be.rejected;
             sinon.assert.calledOnce(commitSpy);
         });
 
@@ -143,65 +105,19 @@ describe("Transaction", () => {
             };
             const commitSpy = sandbox.spy(mockCommunicator, "commit");
             const error = await chai.expect(transaction.commit()).to.be.rejected;
-            chai.assert.equal(error.name, "ClientException");
+            chai.assert.equal(error.name, "ClientError");
             sinon.assert.calledOnce(commitSpy);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
+            const testError: Error = new Error(testMessage);
             mockCommunicator.commit = async () => {
-                throw new Error(testMessage);
+                throw testError;
             };
-            const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            isOccStub.returns(false);
             const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            await chai.expect(transaction.commit()).to.be.rejected;
-            sinon.assert.calledOnce(isOccStub);
+            const result = await chai.expect(transaction.commit()).to.be.rejected;
+            chai.assert.equal(result, testError);
             sinon.assert.calledOnce(commitSpy);
-        });
-
-        it("should return a rejected promise when an OccConflictException occurs", async () => {
-            mockCommunicator.commit = async () => {
-                throw new Error(testMessage);
-            };
-            const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            isOccStub.returns(true);
-            const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            await chai.expect(transaction.commit()).to.be.rejected;
-            sinon.assert.calledOnce(commitSpy);
-            sinon.assert.calledOnce(isOccStub);
-        });
-
-        it("should return a rejected promise when an exception that is not OccConflictException occurs", async () => {
-            mockCommunicator.commit = async () => {
-                throw new Error(testMessage);
-            };
-            const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            isOccStub.returns(false);
-            const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            await chai.expect(transaction.commit()).to.be.rejected;
-            sinon.assert.calledOnce(commitSpy);
-            sinon.assert.calledOnce(abortSpy);
-            sinon.assert.calledOnce(isOccStub);
-        });
-
-        it("should log a warning and return a rejected promise when abortTransaction() throws error", async () => {
-            mockCommunicator.commit = async () => {
-                throw new Error("mockMessage");
-            };
-            mockCommunicator.abortTransaction = async () => {
-                throw new Error("foo2");
-            };
-            const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            const logSpy = sandbox.spy(LogUtil, "warn");
-            isOccStub.returns(false);
-            const commitSpy = sandbox.spy(mockCommunicator, "commit");
-            const abortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            await chai.expect(transaction.commit()).to.be.rejected;
-            sinon.assert.calledOnce(commitSpy);
-            sinon.assert.calledOnce(abortSpy);
-            sinon.assert.calledOnce(isOccStub);
-            sinon.assert.calledOnce(logSpy);
         });
     });
 
@@ -323,24 +239,7 @@ describe("Transaction", () => {
         });
     });
 
-    describe("#_internalClose()", () => {
-        it("should close transaction", async () => {
-            transaction["_internalClose"]();
-            chai.expect(transaction["_isClosed"]).to.be.true;
-        });
-    });
-
     describe("#_sendExecute()", () => {
-        it("should return a rejected promise when called after commit() called", async () => {
-            await transaction.commit();
-            await chai.expect(transaction["_sendExecute"](testStatement, [])).to.be.rejected;
-        });
-
-        it("should return a rejected promise when closed", async () => {
-            transaction["_isClosed"] = true;
-            await chai.expect(transaction["_sendExecute"](testStatement, [])).to.be.rejected;
-        });
-
         it("should compute hashes correctly when called", async () => {
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatement);
 

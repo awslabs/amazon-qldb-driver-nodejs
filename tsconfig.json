@@ -1,13 +1,14 @@
 {
     "compilerOptions": {
-        "target": "es6",
+        "target": "ES2015",
         "module": "commonjs",
-        "lib": [ "es2015" ],
+        "lib": [ "ES2015" ],
         "strict": true,
         "strictNullChecks": false,
         "resolveJsonModule": true,
         "declaration": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "stripInternal": true
     },
     "include": [
         "src/**/*.ts",

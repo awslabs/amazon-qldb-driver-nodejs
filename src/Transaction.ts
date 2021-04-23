@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -16,35 +16,29 @@ import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
 
 import { Communicator } from "./Communicator";
-import { ClientException, isOccConflictException, TransactionClosedError } from "./errors/Errors";
-import { warn } from "./LogUtil";
+import { ClientError } from "./errors/Errors";
 import { QldbHash } from "./QldbHash";
 import { Result } from "./Result";
 import { ResultReadable } from "./ResultReadable";
-import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
  * A class representing a QLDB transaction.
  *
- * Every transaction is tied to a parent (Pooled)QldbSession, meaning that if the parent session is closed or
- * invalidated, the child transaction is automatically closed and cannot be used. Only one transaction can be active at
- * any given time per parent session, and thus every transaction should call {@linkcode Transaction.abort} or
- * {@linkcode Transaction.commit} when it is no longer needed, or when a new transaction is desired from the parent
- * session.
- *
- * An InvalidSessionException indicates that the parent session is dead, and a new transaction cannot be created
- * without a new (Pooled)QldbSession being created from the parent driver.
+ * Every transaction is tied to a parent QldbSession, meaning that if the parent session is closed or invalidated, the 
+ * child transaction is automatically closed and cannot be used. Only one transaction can be active at any given time 
+ * per parent session.
  *
  * Any unexpected errors that occur within a transaction should not be retried using the same transaction, as the state
  * of the transaction is now ambiguous.
  *
  * When an OCC conflict occurs, the transaction is closed and must be handled manually by creating a new transaction
- * and re-executing the desired queries.
+ * and re-executing the desired statements.
+ * 
+ * @internal
  */
-export class Transaction implements TransactionExecutable {
+export class Transaction {
     private _communicator: Communicator;
     private _txnId: string;
-    private _isClosed: boolean;
     private _txnHash: QldbHash;
     private _hashLock: Lock;
 
@@ -56,58 +50,29 @@ export class Transaction implements TransactionExecutable {
     constructor(communicator: Communicator, txnId: string) {
         this._communicator = communicator;
         this._txnId = txnId;
-        this._isClosed = false;
         this._txnHash = QldbHash.toQldbHash(txnId);
         this._hashLock = new Lock();
     }
 
     /**
-     * Abort this transaction and close child ResultReadable objects. No-op if already closed by commit or previous abort.
-     * @returns Promise which fulfills with void.
-     */
-    async abort(): Promise<void> {
-        if (this._isClosed) {
-            return;
-        }
-        this._internalClose();
-        await this._communicator.abortTransaction();
-    }
-
-    /**
      * Commits and closes child ResultReadable objects.
      * @returns Promise which fulfills with void.
-     * @throws {@linkcode TransactionClosedError} when this transaction is closed.
      * @throws {@linkcode ClientException} when the commit digest from commit transaction result does not match.
      */
     async commit(): Promise<void> {
-        if (this._isClosed) {
-            throw new TransactionClosedError();
-        }
+        await this._hashLock.acquire();
         try {
-            await this._hashLock.acquire();
             const commitTxnResult: CommitTransactionResult = await this._communicator.commit(
                 this._txnId,
                 this._txnHash.getQldbHash()
             );
             if (toBase64(this._txnHash.getQldbHash()) !== toBase64(<Uint8Array>(commitTxnResult.CommitDigest))) {
-                throw new ClientException(
+                throw new ClientError(
                     `Transaction's commit digest did not match returned value from QLDB.
                     Please retry with a new transaction. Transaction ID: ${this._txnId}.`
                 );
             }
-            this._isClosed = true;
-        } catch (e) {
-            if (isOccConflictException(e)) {
-                throw e;
-            }
-            try {
-                await this._communicator.abortTransaction();
-            } catch (e2) {
-                warn(`Ignored error aborting transaction after a failed commit: ${e2}.`);
-            }
-            throw e;
         } finally {
-            this._internalClose();
             this._hashLock.release();
         }
     }
@@ -156,27 +121,15 @@ export class Transaction implements TransactionExecutable {
     }
 
     /**
-     * Mark the transaction as closed.
-     */
-    private _internalClose(): void {
-        this._isClosed = true;
-    }
-
-    /**
      * Helper method to execute statement against QLDB.
      * @param statement A statement to execute against QLDB as a string.
      * @param parameters An optional list of Ion values or JavaScript native types that are convertible to Ion for
      *                   filling in parameters of the statement.
      * @returns Promise which fulfills with a ExecuteStatementResult object.
-     * @throws {@linkcode TransactionClosedError} when transaction is closed.
      */
     private async _sendExecute(statement: string, parameters: any[]): Promise<ExecuteStatementResult> {
-        if (this._isClosed) {
-            throw new TransactionClosedError();
-        }
-
+        await this._hashLock.acquire();
         try {
-            await this._hashLock.acquire();
             let statementHash: QldbHash = QldbHash.toQldbHash(statement);
 
             const valueHolderList: ValueHolder[] = parameters.map((param: any) => {

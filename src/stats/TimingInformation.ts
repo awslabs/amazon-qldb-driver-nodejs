@@ -20,6 +20,8 @@ export class TimingInformation {
     /**
      * Creates a TimingInformation.
      * @param processingTimeMilliseconds The server-side processing time in milliseconds.
+     * 
+     * @internal
      */
     constructor(processingTimeMilliseconds: number) {
         this._processingTimeMilliseconds = processingTimeMilliseconds;

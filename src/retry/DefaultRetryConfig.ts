@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -23,6 +23,8 @@ const SLEEP_BASE_MS: number = 10;
  * @param retryAttempt The number of attempts done till now 
  * @param error The error that occurred while executing the previous transaction
  * @param transactionId  The transaction Id for which the execution was attempted
+ * 
+ * @internal
  */
 export const defaultBackoffFunction: BackoffFunction = (retryAttempt: number, error: Error, transactionId: string) => {
     const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(2,  retryAttempt) * SLEEP_BASE_MS);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -33,16 +33,12 @@ import * as LogUtil from "../LogUtil";
 import { QldbSession } from "../QldbSession";
 import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
-import { BackoffFunction } from "../retry/BackoffFunction";
-import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { Transaction } from "../Transaction";
-import { TransactionExecutionContext } from "../TransactionExecutionContext";
 import { AWSError } from "aws-sdk";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
-const testRetryLimit: number = 4;
 const testSessionToken: string = "sessionToken";
 const testTransactionId: string = "txnId";
 const testStartTransactionResult: StartTransactionResult = {
@@ -74,13 +70,14 @@ mockTransaction.getTransactionId = () => {
 
 const resultReadableObject: ResultReadable = new ResultReadable(testTransactionId, testExecuteStatementResult, mockCommunicator);
 let qldbSession: QldbSession;
-let executionContext: TransactionExecutionContext;
 
 describe("QldbSession", () => {
 
     beforeEach(() => {
         qldbSession = new QldbSession(mockCommunicator);
-        mockCommunicator.endSession = async () => {};
+        mockCommunicator.endSession = async () => {
+            return null;
+        };
         mockCommunicator.getSessionToken = () => {
             return testSessionToken;
         };
@@ -96,7 +93,6 @@ describe("QldbSession", () => {
         mockCommunicator.getQldbClient = () => {
             return testQldbLowLevelClient;
         };
-        executionContext = new TransactionExecutionContext();
     });
 
     afterEach(() => {
@@ -106,7 +102,7 @@ describe("QldbSession", () => {
     describe("#constructor()", () => {
         it("should have all attributes equal to mock values when constructor called", () => {
             chai.assert.equal(qldbSession["_communicator"], mockCommunicator);
-            chai.assert.equal(qldbSession["_isClosed"], false);
+            chai.assert.equal(qldbSession["_isAlive"], true);
         });
     });
 
@@ -114,21 +110,14 @@ describe("QldbSession", () => {
         it("should end qldbSession when called", async () => {
             const communicatorEndSpy = sandbox.spy(mockCommunicator, "endSession");
             await qldbSession.endSession();
-            chai.assert.equal(qldbSession["_isClosed"], true);
+            chai.assert.equal(qldbSession["_isAlive"], false);
             sinon.assert.calledOnce(communicatorEndSpy);
-        });
-
-        it("should be a no-op when already closed", async () => {
-            const communicatorEndSpy = sandbox.spy(mockCommunicator, "endSession");
-            qldbSession["_isClosed"] = true;
-            await qldbSession.endSession();
-            sinon.assert.notCalled(communicatorEndSpy);
         });
     });
 
     describe("#executeLambda()", () => {
         it("should return a Result object when called with execute as the lambda", async () => {
-            qldbSession.startTransaction = async () => {
+            qldbSession._startTransaction = async () => {
                 return mockTransaction;
             };
             mockTransaction.execute = async () => {
@@ -137,12 +126,12 @@ describe("QldbSession", () => {
             mockTransaction.commit = async () => {};
 
             const executeSpy = sandbox.spy(mockTransaction, "execute");
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
             const commitSpy = sandbox.spy(mockTransaction, "commit");
 
             const result = await qldbSession.executeLambda(async (txn) => {
                 return await txn.execute(testStatement);
-            }, defaultRetryConfig, executionContext);
+            });
             sinon.assert.calledOnce(executeSpy);
             sinon.assert.calledWith(executeSpy, testStatement);
             sinon.assert.calledOnce(startTransactionSpy);
@@ -154,7 +143,7 @@ describe("QldbSession", () => {
             const resultStub = sandbox.stub(Result, "bufferResultReadable");
             resultStub.returns(Promise.resolve(mockResult));
 
-            qldbSession.startTransaction = async () => {
+            qldbSession._startTransaction = async () => {
                 return mockTransaction;
             };
             mockTransaction.executeAndStreamResults = async () => {
@@ -163,12 +152,13 @@ describe("QldbSession", () => {
             mockTransaction.commit = async () => {};
 
             const executeAndStreamResultsSpy = sandbox.spy(mockTransaction, "executeAndStreamResults");
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
             const commitSpy = sandbox.spy(mockTransaction, "commit");
 
             const result = await qldbSession.executeLambda(async (txn) => {
-                return await txn.executeAndStreamResults(testStatement);
-            }, defaultRetryConfig, executionContext);
+                const resultReadable: ResultReadable = await txn.executeAndStreamResults(testStatement);
+                return Result.bufferResultReadable(resultReadable);
+            });
             sinon.assert.calledOnce(executeAndStreamResultsSpy);
             sinon.assert.calledWith(executeAndStreamResultsSpy, testStatement);
             sinon.assert.calledOnce(startTransactionSpy);
@@ -178,201 +168,129 @@ describe("QldbSession", () => {
         });
 
         it("should return a rejected promise when non-retryable error is thrown", async () => {
-            qldbSession.startTransaction = async () => {
+            qldbSession._startTransaction = async () => {
                 throw new Error(testMessage);
             };
 
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
-            const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
 
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 return await txn.execute(testStatement);
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
+            })).to.be.rejected;
             sinon.assert.calledOnce(startTransactionSpy);
         });
 
-        it("should retry with same session when StartTransaction fails with BadRequestException", async () => {
-            const isBadRequestStub = sandbox.stub(Errors, "isBadRequestException");
-            isBadRequestStub.returns(true);
-
+        it("should throw a wrapped exception when fails containing the original exception", async () => {
+            const testError = new Error(testMessage) as AWSError;
             mockCommunicator.startTransaction = async () => {
-                throw new Error(testMessage);
+                throw testError;
             };
-
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
-            const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            await chai.expect(qldbSession.executeLambda(async (txn) => {
+            
+            const result = await chai.expect(qldbSession.executeLambda(async (txn) => {
                 return await txn.execute(testStatement);
-            }, defaultRetryConfig, executionContext)).to.be.rejectedWith(Errors.StartTransactionError);
-            sinon.assert.callCount(startTransactionSpy, testRetryLimit + 1);
-            sinon.assert.callCount(noThrowAbortSpy, testRetryLimit + 1);
+            })).to.be.rejectedWith(Errors.ExecuteError);
+            chai.assert.equal(result.cause, testError);
         });
 
-        it("should not retry with same session when startTransaction fails with InvalidSessionException", async () => {
-            const isInvalidSessionExceptionStub = sandbox.stub(Errors, "isInvalidSessionException");
-            isInvalidSessionExceptionStub.returns(true);
+        it("should wrap when fails with InvalidSessionException and close the session", async () => {
+            const testError = new Error(testMessage) as AWSError;
+            testError.code = "InvalidSessionException";
 
             mockCommunicator.startTransaction = async () => {
-                throw new Error(testMessage);
+                throw testError;
             };
 
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
-            const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            await chai.expect(qldbSession.executeLambda(async (txn) => {
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
+            const result = await chai.expect(qldbSession.executeLambda(async (txn) => {
                 return await txn.execute(testStatement);
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
+            })).to.be.rejected;
             sinon.assert.callCount(startTransactionSpy, 1);
-            sinon.assert.neverCalledWith(noThrowAbortSpy);
+            chai.assert.equal(result.cause, testError);
+            chai.assert.isFalse(qldbSession.isAlive());
         });
 
-        it("should retry when OccConflictException occurs", async () => {
-            const isOccStub = sandbox.stub(Errors, "isOccConflictException");
-            isOccStub.returns(true);
+        it("should wrap when fails with OccConflictException and session is still alive", async () => {
+            const testError = new Error(testMessage) as AWSError;
+            testError.code = "OccConflictException";
+            const tryAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
 
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
-            const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            const logSpy = sandbox.spy(LogUtil, "warn");
+            mockCommunicator.startTransaction = async () => {
+                throw testError;
+            };
 
-            await chai.expect(qldbSession.executeLambda(async (txn) => {
-                throw new Error(testMessage);
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
-
-            sinon.assert.callCount(startTransactionSpy, testRetryLimit + 1);
-            sinon.assert.neverCalledWith(noThrowAbortSpy, testRetryLimit + 1);
-            sinon.assert.callCount(logSpy, testRetryLimit);
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
+            const result = await chai.expect(qldbSession.executeLambda(async (txn) => {
+                return await txn.execute(testStatement);
+            })).to.be.rejected;
+            sinon.assert.callCount(startTransactionSpy, 1);
+            chai.assert.equal(result.cause, testError);
+            chai.assert.isTrue(qldbSession.isAlive());
+            sinon.assert.notCalled(tryAbortSpy);
         });
 
-        it("should retry when retriable exception occurs", async () => {
+        it("should return a rejected promise with wrapped retriable error when retriable exception occurs", async () => {
             const isRetriableStub = sandbox.stub(Errors, "isRetriableException");
             isRetriableStub.returns(true);
 
-            const startTransactionSpy = sandbox.spy(qldbSession, "startTransaction");
-            const noThrowAbortSpy = sandbox.spy(qldbSession as any, "_noThrowAbort");
-            const logSpy = sandbox.spy(LogUtil, "warn");
+            const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
 
-            await chai.expect(qldbSession.executeLambda(async (txn) => {
+            const result = await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw new Error(testMessage);
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
+            })).to.be.rejected;
 
-            sinon.assert.callCount(startTransactionSpy, testRetryLimit + 1);
-            sinon.assert.callCount(noThrowAbortSpy, testRetryLimit + 1);
-            sinon.assert.callCount(logSpy, testRetryLimit);
+            sinon.assert.calledOnce(startTransactionSpy);
+            chai.assert.isTrue(result.isRetriable);
         });
 
-        it("should return a rejected promise with the exception when InvalidSessionException occurs", async () => {
-            const isInvalidSessionStub = sandbox.stub(Errors, "isInvalidSessionException");
-            isInvalidSessionStub.returns(true);
-
-            await chai.expect(qldbSession.executeLambda(async (txn) => {
-                throw new Error("ISE");
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
-
-           chai.assert.isFalse(qldbSession.isSessionOpen());
-        });
-
-        it("should return a rejected promise when Transaction expires", async () => {
+        it("should return a rejected promise with a wrapped error when Transaction expires", async () => {
             const error = new Error("InvalidSession") as AWSError;
             error.code = "InvalidSessionException";
             error.message = "Transaction ABC has expired";
             const communicatorTransactionSpy = sandbox.spy(mockCommunicator, "startTransaction");
+            const communicatorAbortTransactionSpy = sandbox.spy(mockCommunicator, "abortTransaction");
 
             let result = await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw error;
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
+            })).to.be.rejected;
             sinon.assert.calledOnce(communicatorTransactionSpy);
-            chai.assert.equal(result.message, error.message);
+            chai.assert.equal(result.cause.message, error.message);
+            sinon.assert.calledOnce(communicatorAbortTransactionSpy);
+            chai.assert.isTrue(qldbSession.isAlive());
         });
 
         it("should return a rejected promise when a LambdaAbortedError occurs", async () => {
             const lambdaAbortedError: Errors.LambdaAbortedError = new Errors.LambdaAbortedError();
             await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw lambdaAbortedError;
-            }, defaultRetryConfig, executionContext)).to.be.rejected;
-        });
-
-    });
-
-    describe("#getSessionToken()", () => {
-        it("should return the session token when called", () => {
-            const communicatorTokenSpy = sandbox.spy(mockCommunicator, "getSessionToken");
-            const sessionToken: string = qldbSession.getSessionToken();
-            chai.assert.equal(sessionToken, testSessionToken);
-            sinon.assert.calledOnce(communicatorTokenSpy);
+            })).to.be.rejected;
         });
     });
 
-    describe("#startTransaction()", () => {
+    describe("#_startTransaction()", () => {
         it("should return a Transaction object when called", async () => {
             const communicatorTransactionSpy = sandbox.spy(mockCommunicator, "startTransaction");
-            const transaction = await qldbSession.startTransaction();
+            const transaction = await qldbSession._startTransaction();
             chai.expect(transaction).to.be.an.instanceOf(Transaction);
             chai.assert.equal(transaction["_txnId"], testTransactionId);
             sinon.assert.calledOnce(communicatorTransactionSpy);
         });
-
     });
 
-    describe("#_noThrowAbort()", () => {
-        it("should call Transaction's abort() when Transaction is not null", async () => {
-            mockTransaction.abort = async () => {};
+    describe("#_cleanSessionState()", () => {
+        it("should call abortTransaction()", async () => {
             const communicatorAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            const transactionAbortSpy = sandbox.spy(mockTransaction, "abort");
-            await qldbSession["_noThrowAbort"](mockTransaction);
-            sinon.assert.notCalled(communicatorAbortSpy);
-            sinon.assert.calledOnce(transactionAbortSpy);
+            await qldbSession["_cleanSessionState"]();
+            sinon.assert.calledOnce(communicatorAbortSpy);
         });
 
-        it("should log warning message when error is thrown", async () => {
-            mockTransaction.abort = async () => {
-                throw new Error(testMessage);
-            };
+        it("should log warning message when error is thrown and set alive state to false", async () => {
+            const communicatorAbortStub = sandbox.stub(mockCommunicator, "abortTransaction");
+            communicatorAbortStub.throws(new Error("testError"));
             const logSpy = sandbox.spy(LogUtil, "warn");
-            const communicatorAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
-            const transactionAbortSpy = sandbox.spy(mockTransaction, "abort");
-            await qldbSession["_noThrowAbort"](mockTransaction);
-            sinon.assert.notCalled(communicatorAbortSpy);
-            sinon.assert.calledOnce(transactionAbortSpy);
+            await qldbSession["_cleanSessionState"]();
+            sinon.assert.calledOnce(communicatorAbortStub);
             sinon.assert.calledOnce(logSpy);
-        });
-    });
-
-    describe("#RetryDelayTime()", () => {
-        /* Test that the
-            1. Default retry policy increases delay exponentially (when math.random is overriden to return 1)
-            2. _sleep method gets called with the calculated delay time
-        */
-        it("should increase delay exponentially when called with DefaultRetryConfig", async () => {
-            const sleepSpy = sandbox.stub(qldbSession as any ,"_sleep");
-            const mathRandStub = sandbox.stub(Math, "random");
-            mathRandStub.returns(1);
-            let executionContext: TransactionExecutionContext = new TransactionExecutionContext();
-            let defaultBackOffFunction: BackoffFunction = defaultRetryConfig.getBackoffFunction();
-
-            //Increment the attempt number to 1 and determine what the delay time would be when using default retry policy
-            executionContext.incrementExecutionAttempt();
-            const delayTime1: number = defaultBackOffFunction(executionContext.getExecutionAttempt(), null, null);
-            await qldbSession["_retrySleep"](executionContext, defaultRetryConfig, mockTransaction);
-            //Verify sleep method was called with correct delay Time
-            sleepSpy.calledWith(delayTime1);
-
-            //Increment the attempt number to 2 and determine what the delay time would be when using default retry policy
-            executionContext.incrementExecutionAttempt();
-            const delayTime2: number = defaultBackOffFunction(executionContext.getExecutionAttempt(), null, null);
-            await qldbSession["_retrySleep"](executionContext, defaultRetryConfig, mockTransaction);
-            //Verify sleep method was called with correct delay Time
-            sleepSpy.calledWith(delayTime2);
-
-            //Increment the attempt number to 3 and determine what the delay time would be when using default retry policy
-            executionContext.incrementExecutionAttempt();
-            const delayTime3: number = defaultBackOffFunction(executionContext.getExecutionAttempt(), null, null);
-            await qldbSession["_retrySleep"](executionContext, defaultRetryConfig, mockTransaction);
-            //Verify sleep method was called with correct delay Time
-            sleepSpy.calledWith(delayTime3);
-
-            //Verify that delayTime3 = 2 * delayTime2 and delayTime2 = 2 * delayTime1
-            chai.expect(delayTime2 - 1).to.equal((delayTime1 - 1) * 2);
-            chai.expect(delayTime3 - 1).to.equal((delayTime1 - 1) * 4);
-            chai.expect(delayTime3 - 1).to.equal((delayTime2 - 1) * 2);
+            chai.assert.isFalse(qldbSession.isAlive());
         });
     });
 });

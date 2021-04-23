@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -44,6 +44,8 @@ export class ResultReadable extends Readable {
      * @param txnId The ID of the transaction the statement was executed in.
      * @param executeResult The returned result from the statement execution.
      * @param communicator The Communicator used for the statement execution.
+     * 
+     * @internal
      */
     constructor(txnId: string, executeResult: ExecuteStatementResult, communicator: Communicator) {
         super({ objectMode: true });
@@ -82,6 +84,8 @@ export class ResultReadable extends Readable {
      * Implementation of the `readable.read` method for the Node Streams Readable Interface.
      * @param size The number of bytes to read asynchronously. This is currently not being used as only object mode is
      * supported.
+     * 
+     * @internal
      */
     _read(size?: number): void {
         if (this._isPushingData) {

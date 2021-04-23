@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -17,17 +17,25 @@ import { error } from "../LogUtil";
 
 const transactionExpiredPattern = RegExp("Transaction .* has expired");
 
-export class ClientException extends Error {
+export class ClientError extends Error {
+
+    /**
+     * @internal
+     */
     constructor(message: string) {
         super(message);
-        Object.setPrototypeOf(this, ClientException.prototype)
+        Object.setPrototypeOf(this, ClientError.prototype)
         this.message = message;
-        this.name = "ClientException";
+        this.name = "ClientError";
         error(message);
     }
 }
 
 export class DriverClosedError extends Error {
+
+    /**
+     * @internal
+     */
     constructor() {
         const message: string = "Cannot invoke methods on a closed driver. Please create a new driver and retry.";
         super(message);
@@ -39,6 +47,10 @@ export class DriverClosedError extends Error {
 }
 
 export class LambdaAbortedError extends Error {
+
+    /**
+     * @internal
+     */
     constructor() {
         const message: string = "Abort called. Halting execution of lambda function.";
         super(message);
@@ -49,19 +61,12 @@ export class LambdaAbortedError extends Error {
     }
 }
 
-export class SessionClosedError extends Error {
-    constructor() {
-        const message: string = "Cannot invoke methods on a closed QldbSession. Please create a new session and retry.";
-        super(message);
-        Object.setPrototypeOf(this, SessionClosedError.prototype)
-        this.message = message;
-        this.name = "SessionClosedError";
-        error(message);
-    }
-}
-
 export class SessionPoolEmptyError extends Error {
-    constructor(timeout: number) {
+
+    /**
+     * @internal
+     */
+    constructor() {
         const message: string =
             "Session pool is empty. Please close existing sessions first before retrying.";
         super(message);
@@ -72,33 +77,26 @@ export class SessionPoolEmptyError extends Error {
     }
 }
 
-export class TransactionClosedError extends Error {
-    constructor() {
-        const message: string =
-            "Cannot invoke methods on a closed Transaction. Please create a new transaction and retry.";
+/**
+ * @internal
+ */
+export class ExecuteError extends Error {
+    cause: Error;
+    isRetriable: boolean;
+    isInvalidSessionException: boolean;
+    transactionId: string;
+
+    constructor(cause: Error, isRetriable: boolean, isInvalidSessionException: boolean, transactionId: string = null) {
+        const message: string = "Error containing the context of a failure during Execute.";
         super(message);
-        Object.setPrototypeOf(this, TransactionClosedError.prototype)
-        this.message = message;
-        this.name = "TransactionClosedError";
-        error(message);
+        Object.setPrototypeOf(this, ExecuteError.prototype)
+        this.cause = cause;
+        this.isRetriable = isRetriable;
+        this.isInvalidSessionException = isInvalidSessionException;
+        this.transactionId = transactionId;
     }
 }
 
-
-//CFR: This is exception should be used only by the driver to move to next session in pool 
-export class StartTransactionError extends Error {
-    public cause: Error;
-    constructor(e: Error) {
-        const message: string =
-            "Failed to start a transaction. Either another transaction is already open on this session or something else went wrong. Please retry the transaction.";
-        super(message);
-        Object.setPrototypeOf(this, StartTransactionError.prototype)
-        this.message = message;
-        this.name = "StartTransactionError";
-        this.cause = e;
-        error(message);
-    }
-}
 /**
  * Is the exception an InvalidParameterException?
  * @param e The client error caught.
@@ -167,8 +165,20 @@ export function isBadRequestException(e: AWSError): boolean {
  * Is the exception a retriable exception?
  * @param e The client error caught.
  * @returns True if the exception is a retriable exception. False otherwise.
+ * 
+ * @internal
  */
 export function isRetriableException(e: AWSError): boolean {
+    return isRetriableStatusCode(e) || isOccConflictException(e) || 
+        (isInvalidSessionException(e) && !isTransactionExpiredException(e));
+}
+
+/**
+ * Does the error have a retriable code or status code?
+ * @param e The client error caught.
+ * @returns True if the exception has a retriable code.
+ */
+function isRetriableStatusCode(e: AWSError): boolean {
     return (e.statusCode === 500) ||
            (e.statusCode === 503) ||
            (e.code === "NoHttpResponseException") ||

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
  * the License. A copy of the License is located at
@@ -15,17 +15,18 @@ import { LambdaAbortedError } from "./errors/Errors";
 import { Result } from "./Result";
 import { ResultReadable } from "./ResultReadable";
 import { Transaction } from "./Transaction";
-import { TransactionExecutable } from "./TransactionExecutable";
 
 /**
  * A class to handle lambda execution.
  */
-export class TransactionExecutor implements TransactionExecutable {
-    _transaction: Transaction;
+export class TransactionExecutor {
+    private _transaction: Transaction;
 
     /**
      * Creates a TransactionExecutor.
      * @param transaction The transaction that this executor is running within.
+     * 
+     * @internal
      */
     constructor(transaction: Transaction) {
         this._transaction = transaction;
