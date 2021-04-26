@@ -27,11 +27,9 @@ const SLEEP_BASE_MS: number = 10;
  * @internal
  */
 export const defaultBackoffFunction: BackoffFunction = (retryAttempt: number, error: Error, transactionId: string) => {
-    const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(2,  retryAttempt) * SLEEP_BASE_MS);
-    const min: number = 0;
-    const max: number = exponentialBackoff/2 + 1;
-    const jitterRand: number = Math.random() * (max - min) + min;
-    const delayTime: number = (exponentialBackoff/2) + jitterRand;
+    const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(SLEEP_BASE_MS * 2,  retryAttempt));
+    const jitterRand: number = Math.random();
+    const delayTime: number = jitterRand * exponentialBackoff;
     return delayTime;
 }
 
