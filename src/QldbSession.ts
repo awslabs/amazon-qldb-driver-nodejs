@@ -18,7 +18,7 @@ import {
     ExecuteError,
     isInvalidSessionException,
     isOccConflictException,
-    isRetriableException,
+    isRetryableException,
     isTransactionExpiredException
 } from "./errors/Errors";
 import { warn } from "./LogUtil";
@@ -64,7 +64,7 @@ export class QldbSession {
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetriable: boolean = isRetriableException(e);
+            const isRetryable: boolean = isRetryableException(e);
             const isISE: boolean = isInvalidSessionException(e);
             if (isISE && !isTransactionExpiredException(e)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
@@ -73,7 +73,7 @@ export class QldbSession {
                 // OCC does not need session state reset as the transaction is implicitly closed
                 await this._cleanSessionState();
             }
-            throw new ExecuteError(e, isRetriable, isISE, transactionId);
+            throw new ExecuteError(e, isRetryable, isISE, transactionId);
         }
     }
 

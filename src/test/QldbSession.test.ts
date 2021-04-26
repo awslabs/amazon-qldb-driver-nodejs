@@ -228,9 +228,9 @@ describe("QldbSession", () => {
             sinon.assert.notCalled(tryAbortSpy);
         });
 
-        it("should return a rejected promise with wrapped retriable error when retriable exception occurs", async () => {
-            const isRetriableStub = sandbox.stub(Errors, "isRetriableException");
-            isRetriableStub.returns(true);
+        it("should return a rejected promise with wrapped retryable error when retryable exception occurs", async () => {
+            const isRetryableStub = sandbox.stub(Errors, "isRetryableException");
+            isRetryableStub.returns(true);
 
             const startTransactionSpy = sandbox.spy(qldbSession, "_startTransaction");
 
@@ -239,7 +239,7 @@ describe("QldbSession", () => {
             })).to.be.rejected;
 
             sinon.assert.calledOnce(startTransactionSpy);
-            chai.assert.isTrue(result.isRetriable);
+            chai.assert.isTrue(result.isRetryable);
         });
 
         it("should return a rejected promise with a wrapped error when Transaction expires", async () => {
