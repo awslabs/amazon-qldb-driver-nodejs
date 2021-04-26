@@ -23,7 +23,6 @@ import Semaphore from "semaphore-async-await";
 import * as sinon from "sinon";
 
 import { DriverClosedError, ExecuteError, SessionPoolEmptyError } from "../errors/Errors";
-import * as LogUtil from "../LogUtil";
 import { QldbDriver } from "../QldbDriver";
 import { QldbSession } from "../QldbSession";
 import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
@@ -211,7 +210,7 @@ describe("QldbDriver", () => {
             const result = await chai.expect(qldbDriver.executeLambda(lambda, defaultRetryConfig)).to.be.rejected;
             chai.assert.equal(result.code, errorCode);
             sinon.assert.callCount(executeLambdaSpy, defaultRetryConfig.getRetryLimit() + 1);
-        });
+        }).timeout(20000);
 
         it("should throw DriverClosedError wrapped in a rejected promise when closed", async () => {
             const lambda = async (transactionExecutor: TransactionExecutor) => {
