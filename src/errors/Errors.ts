@@ -82,16 +82,16 @@ export class SessionPoolEmptyError extends Error {
  */
 export class ExecuteError extends Error {
     cause: Error;
-    isRetriable: boolean;
+    isRetryable: boolean;
     isInvalidSessionException: boolean;
     transactionId: string;
 
-    constructor(cause: Error, isRetriable: boolean, isInvalidSessionException: boolean, transactionId: string = null) {
+    constructor(cause: Error, isRetryable: boolean, isInvalidSessionException: boolean, transactionId: string = null) {
         const message: string = "Error containing the context of a failure during Execute.";
         super(message);
         Object.setPrototypeOf(this, ExecuteError.prototype)
         this.cause = cause;
-        this.isRetriable = isRetriable;
+        this.isRetryable = isRetryable;
         this.isInvalidSessionException = isInvalidSessionException;
         this.transactionId = transactionId;
     }
@@ -162,23 +162,23 @@ export function isBadRequestException(e: AWSError): boolean {
 }
 
 /**
- * Is the exception a retriable exception?
+ * Is the exception a retryable exception?
  * @param e The client error caught.
- * @returns True if the exception is a retriable exception. False otherwise.
+ * @returns True if the exception is a retryable exception. False otherwise.
  * 
  * @internal
  */
-export function isRetriableException(e: AWSError): boolean {
-    return isRetriableStatusCode(e) || isOccConflictException(e) || 
+export function isRetryableException(e: AWSError): boolean {
+    return isRetryableStatusCode(e) || isOccConflictException(e) || 
         (isInvalidSessionException(e) && !isTransactionExpiredException(e));
 }
 
 /**
- * Does the error have a retriable code or status code?
+ * Does the error have a retryable code or status code?
  * @param e The client error caught.
- * @returns True if the exception has a retriable code.
+ * @returns True if the exception has a retryable code.
  */
-function isRetriableStatusCode(e: AWSError): boolean {
+function isRetryableStatusCode(e: AWSError): boolean {
     return (e.statusCode === 500) ||
            (e.statusCode === 503) ||
            (e.code === "NoHttpResponseException") ||

@@ -21,7 +21,7 @@ export class RetryConfig {
     /** 
     * Retry and Backoff config for Qldb Driver. 
 
-    * @param retryLimit When there is a failure while executing the transaction like OCC or any other retriable failure, the driver will try running your transaction block again.
+    * @param retryLimit When there is a failure while executing the transaction like OCC or any other retryable failure, the driver will try running your transaction block again.
     *                   This parameter tells the driver how many times to retry when there are failures. The value must be greater than 0. The default value is 4.
     *                   See {@link https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html#driver.best-practices.configuring} for more details. 
     * 

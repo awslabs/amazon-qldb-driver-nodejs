@@ -193,7 +193,7 @@ describe("QldbDriver", () => {
             sinon.assert.notCalled(executeLambdaSpy2);
         });
 
-        it("should retry only up to retry limit times when there is retriable error", async () => {
+        it("should retry only up to retry limit times when there is retryable error", async () => {
             const mockSession: QldbSession = <QldbSession><any> sandbox.mock(QldbSession);
             const errorCode: string = "OccConflictException";
             mockSession.executeLambda = async () => {

@@ -198,7 +198,7 @@ export class QldbDriver {
                     }
                     return session;
                 } catch (e) {
-                    // An error when failing to start a new session is always retriable
+                    // An error when failing to start a new session is always retryable
                     throw new ExecuteError(e, true, true);
                 }
             } else {
@@ -228,7 +228,7 @@ export class QldbDriver {
                 return await session.executeLambda(transactionLambda);
             } catch (e) {
                 if (e instanceof ExecuteError) {
-                    if (e.isRetriable) {
+                    if (e.isRetryable) {
                         // Always retry on the first attempt if failure was caused by a stale session in the pool 
                         if (retryAttempt == 1 && e.isInvalidSessionException) {
                             debug("Initial session received from pool is invalid. Retrying...");
