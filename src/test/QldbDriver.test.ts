@@ -28,6 +28,7 @@ import { QldbSession } from "../QldbSession";
 import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { Result } from "../Result";
 import { TransactionExecutor } from "../TransactionExecutor";
+import { RetryConfig } from "../retry/RetryConfig";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -206,11 +207,12 @@ describe("QldbDriver", () => {
             };
             mockSession.isAlive = () => true;
 
+            const retryConfig: RetryConfig = new RetryConfig(2)
             qldbDriver["_sessionPool"] = [mockSession];
-            const result = await chai.expect(qldbDriver.executeLambda(lambda, defaultRetryConfig)).to.be.rejected;
+            const result = await chai.expect(qldbDriver.executeLambda(lambda, retryConfig)).to.be.rejected;
             chai.assert.equal(result.code, errorCode);
-            sinon.assert.callCount(executeLambdaSpy, defaultRetryConfig.getRetryLimit() + 1);
-        }).timeout(20000);
+            sinon.assert.callCount(executeLambdaSpy, retryConfig.getRetryLimit() + 1);
+        });
 
         it("should throw DriverClosedError wrapped in a rejected promise when closed", async () => {
             const lambda = async (transactionExecutor: TransactionExecutor) => {
