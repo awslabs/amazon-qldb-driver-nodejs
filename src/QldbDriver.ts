@@ -199,6 +199,8 @@ export class QldbDriver {
                     return session;
                 } catch (e) {
                     // An error when failing to start a new session is always retryable
+                    thisDriver._semaphore.release();
+                    thisDriver._availablePermits++;
                     throw new ExecuteError(e, true, true);
                 }
             } else {
@@ -208,14 +210,15 @@ export class QldbDriver {
 
         // Release semaphore and if the session is alive return it to the pool and return true
         const releaseSession = function(thisDriver: QldbDriver, session: QldbSession): boolean {
-            thisDriver._semaphore.release();
-            thisDriver._availablePermits++;
-            if (session != null && session.isAlive()) {
-                thisDriver._sessionPool.push(session);
-                return true;
-            } else {
-                return false;
+            if (session != null) {
+                thisDriver._semaphore.release();
+                thisDriver._availablePermits++;
+                if (session.isAlive()) {
+                    thisDriver._sessionPool.push(session);
+                    return true;
+                }
             }
+            return false;
         }
         
         retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
