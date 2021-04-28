@@ -24,7 +24,7 @@ import {
     ExecuteError,
     SessionPoolEmptyError,
  } from "./errors/Errors";
-import { debug, info } from "./LogUtil";
+import { debug, info, warn } from "./LogUtil";
 import { QldbSession } from "./QldbSession";
 import { Result } from "./Result";
 import { BackoffFunction } from "./retry/BackoffFunction";
@@ -71,7 +71,7 @@ export class QldbDriver {
      *                                  The default is set to maximum number of sockets specified in the globalAgent.
      *                                  See {@link https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html#driver.best-practices.configuring} for more details.
      * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retryConfig
-     *                    is passed to {@linkcode executeLambda}.
+     *                    is passed to {@linkcode executeLambda}. Deprecated: Will be removed in the next major release.
      *
      * @throws RangeError if `maxConcurrentTransactions` is less than 0.
      */
@@ -79,8 +79,14 @@ export class QldbDriver {
         ledgerName: string,
         qldbClientOptions: ClientConfiguration = {},
         maxConcurrentTransactions: number = 0,
-        retryConfig: RetryConfig = defaultRetryConfig
+        retryConfig: RetryConfig = null
     ) {
+        if (retryConfig == null) {
+            retryConfig = defaultRetryConfig;
+        } else {
+            warn("retryConfig parameter is deprecated and will be removed in the next major release");
+        }
+
         qldbClientOptions.customUserAgent = `QLDB Driver for Node.js v${version}`;
         qldbClientOptions.maxRetries = 0;
 
@@ -161,7 +167,7 @@ export class QldbDriver {
      *
      * @param transactionLambda The function representing a transaction to be executed. Please see the method docs to understand the usage of this parameter.
      * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. This config
-     *                    overrides the retry config set at driver level for a particular lambda execution.
+     *                    overrides the retry config set at driver level for a particular lambda execution. Deprecated: Will be removed in the next major release.
      *                    Note that all the values of the driver level retry config will be overridden by the new config passed here.
      * @throws {@linkcode DriverClosedError} When a transaction is attempted on a closed driver instance. {@linkcode close}
      * @throws {@linkcode ClientException} When the commit digest from commit transaction result does not match.
@@ -218,7 +224,10 @@ export class QldbDriver {
             }
         }
         
-        retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
+        if (retryConfig != undefined) {
+            warn("retryConfig parameter is deprecated and will be removed in the next major release");
+        }
+        retryConfig = (retryConfig == undefined) ? this._retryConfig : retryConfig;
         let session: QldbSession;
         let startNewSession: boolean = false;
         for (let retryAttempt: number = 1; true; retryAttempt++) {
