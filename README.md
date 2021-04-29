@@ -1,8 +1,6 @@
 # Amazon QLDB Node.js Driver
 
 [![NPM Version](https://img.shields.io/badge/npm-v2.1.1-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)  [![Documentation](https://img.shields.io/badge/docs-api-green.svg)](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html)
-[![GitHub license](docs/static/apache2.svg)](./LICENSE)
-![aws provider](https://img.shields.io/badge/provider-AWS-orange?logo=amazon-aws&color=ff9900)
 
 This is the Node.js driver for Amazon Quantum Ledger Database (QLDB), which allows Node.js developers to write software that makes use of AmazonQLDB.
 
