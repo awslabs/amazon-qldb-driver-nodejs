@@ -234,6 +234,46 @@ describe("QldbDriver", () => {
             const result = await chai.expect(qldbDriver.executeLambda(lambda)).to.be.rejected;
             chai.assert.equal(result.name, SessionPoolEmptyError.name);
         });
+
+        it("should not increment semaphore permit count if called when pool empty", async () => {
+            const onePermitDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, 1);
+            onePermitDriver["_sessionPool"] = [mockQldbSession];
+            const executeStub = sandbox.stub(mockQldbSession, "executeLambda");
+            executeStub.returns(new Promise(resolve => setTimeout(resolve, 10)));
+
+            let promise1 = onePermitDriver.executeLambda(async (txn) => {
+                return true;
+            });
+            let promise2 = onePermitDriver.executeLambda(async (txn) => {
+                return true;
+            });
+
+            // Two concurrent transactions will fail due to session pool being empty
+            promise1.catch((e) => {
+                chai.assert.fail(e);
+            });
+            promise2.catch((e) => {
+            });
+            await promise1;
+            let result = await chai.expect(promise2).to.be.rejected;
+            chai.assert.equal(result.name, SessionPoolEmptyError.name);
+
+            promise1 = onePermitDriver.executeLambda(async (txn) => {
+                return true;
+            });
+            promise2 = onePermitDriver.executeLambda(async (txn) => {
+                return true;
+            });
+            // If permit leaked, this will succeed since now there's two permits
+            promise1.catch((e) => {
+                chai.assert.fail(e);
+            });
+            promise2.catch((e) => {
+            });
+            await promise1;
+            result = await chai.expect(promise2).to.be.rejected;
+            chai.assert.equal(result.name, SessionPoolEmptyError.name);
+        });
     });
 
     describe("#getTableNames()", () => {
