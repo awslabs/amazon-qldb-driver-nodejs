@@ -180,6 +180,28 @@ describe("Errors", () => {
             mockError.statusCode = 200;
             chai.assert.isFalse(isRetryableException(mockError));
         });
+
+        it("should appropriately handle networking errors", () => {
+            const awsError: AWSError = <AWSError><any> sandbox.mock(Error);
+            const networkingError: AWSError = <AWSError><any> sandbox.mock(Error);
+
+            // Empty originalError causes false
+            awsError.originalError = undefined;
+            chai.assert.isFalse(isRetryableException(awsError));
+
+            // Empty code in networking error causes false
+            awsError.originalError = networkingError;
+            networkingError.code = undefined;
+            chai.assert.isFalse(isRetryableException(awsError));
+            
+            // Wrong code in networking error causes false
+            networkingError.code = "NotNetworkingError";
+            chai.assert.isFalse(isRetryableException(awsError));
+
+            // Right code causes true
+            networkingError.code = "NetworkingError";
+            chai.assert.isTrue(isRetryableException(awsError));
+        });
     });
 
     describe("#isTransactionExpiredException", () => {
