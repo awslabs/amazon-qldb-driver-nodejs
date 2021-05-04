@@ -26,8 +26,9 @@ Please see the link below for more detail on TypeScript 3.8.x:
 * [TypeScript 3.8.x](https://www.npmjs.com/package/typescript)
 
 
-
 ## Getting Started
+
+Please see the [Quickstart guide for the Amazon QLDB Driver for Node.js](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-quickstart-nodejs.html).
 
 To use the driver, in your package that wishes to use the driver, run the following:
 
@@ -105,6 +106,19 @@ Additionally, a region can be specified in: `src/integrationtest/.mocharc.json`.
 TypeDoc is used for documentation. You can generate HTML locally with the following:
 
 ```npm run doc```
+
+## Getting Help
+
+Please use these community resources for getting help.
+* Ask a question on StackOverflow and tag it with the [amazon-qldb](https://stackoverflow.com/questions/tagged/amazon-qldb) tag.
+* Open a support ticket with [AWS Support](http://docs.aws.amazon.com/awssupport/latest/user/getting-started.html).
+* If you think you may have found a bug, please open an [issue](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues/new).
+
+## Opening Issues
+
+If you encounter a bug with the Amazon QLDB Node.js Driver, we would like to hear about it. Please search the [existing issues](https://github.com/awslabs/amazon-qldb-driver-nodejs/issues) and see if others are also experiencing the issue before opening a new issue. When opening a new issue, we will need the version of Amazon QLDB Node.js Driver, Node.js language version, and OS you’re using. Please also include reproduction case for the issue when appropriate.
+
+The GitHub issues are intended for bug reports and feature requests. For help and questions with using AWS QLDB Node.js Driver please make use of the resources listed in the [Getting Help](https://github.com/awslabs/amazon-qldb-driver-nodejs#getting-help) section. Keeping the list of open issues lean will help us respond in a timely manner.
 
 ## License
 
