@@ -39,6 +39,10 @@ These changes either remove unintentionally exported modules or remove the use o
   * Removed modules being accessible when importing from `amazon-qldb-driver-nodejs/src`.
   * TypeScript: Removed constructors in the API for some exported types.
 
+## :bug: Bug Fixes
+
+* Fixed a bug where `No open transaction` or `Transaction already open` errors would occur
+
 # 2.1.1
 * Export `ResultReadable`.
 * Change the return type of `executeAndStreamResults()` from `Readable` to `ResultReadable` which extends `Readable`.

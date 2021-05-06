@@ -20,7 +20,7 @@ See [Setting Region](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer
 
 ### TypeScript 3.8.x
 
-The driver is written in, and requires, TypeScript 3.8.x. It will be automatically installed as a dependency. 
+Development of the driver requires TypeScript 3.8.x. It will be automatically installed as a dependency. It is also recommended to use TypeScript when using the driver.
 Please see the link below for more detail on TypeScript 3.8.x:
 
 * [TypeScript 3.8.x](https://www.npmjs.com/package/typescript)
