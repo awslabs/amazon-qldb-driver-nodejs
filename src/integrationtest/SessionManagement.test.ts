@@ -21,6 +21,7 @@ import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { isTransactionExpiredException, DriverClosedError, SessionPoolEmptyError } from "../errors/Errors";
 import { QldbDriver } from "../QldbDriver";
 import { Result } from "../Result";
+import { RetryConfig } from "../retry/RetryConfig";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
@@ -119,7 +120,7 @@ describe("SessionManagement", function() {
         }
     });
 
-    it("Throws exception when transaction expires due to timeout", async() => {
+    it("Throws exception when transaction expires due to timeout", async () => {
         const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config);
         let error;
         try {
@@ -129,6 +130,29 @@ describe("SessionManagement", function() {
             })).to.be.rejected;
         } finally {
             chai.assert.isTrue(isTransactionExpiredException(error));
+        }
+    });
+
+    it("Properly cleans the transaction state and does not abort it in the middle of a transaction", async () => {
+        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config, 1);
+
+        const noDelayConfig: RetryConfig = new RetryConfig(Number.MAX_VALUE, () => 0);
+
+        const startTime: number = Date.now();
+        
+        while ((Date.now() - startTime) < 10000) {
+            try {
+                await driver.executeLambda(async (txn) => {
+                    await txn.execute(`SELECT * FROM ${constants.TABLE_NAME}`);
+                    if ((Date.now() - startTime) < 10000) {
+                        const err: AWSError = new Error("mock retryable exception") as AWSError;
+                        err.statusCode = 500;
+                        throw err;
+                    }
+                }, noDelayConfig);
+            } catch (e) {
+                chai.assert.fail(e.message);
+            }
         }
     });
 });
