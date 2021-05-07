@@ -121,7 +121,7 @@ describe("StatementExecution", function() {
             // {
             //    expr: "[MyColumn]"
             // }
-            const indexColumn: string = result.getResultList()[0].elements()[0].stringValue();
+            const indexColumn: string = result.getResultList()[0].get("expr").stringValue();
             return indexColumn;
         });
         chai.assert.equal(indexColumn, "[" + constants.INDEX_ATTRIBUTE + "]");
@@ -219,7 +219,7 @@ describe("StatementExecution", function() {
             // {
             //    _1: 1
             // }
-            return (await txn.execute(searchQuery)).getResultList()[0].elements()[0].numberValue();
+            return (await txn.execute(searchQuery)).getResultList()[0].get("_1").numberValue();
         });
 
         chai.assert.equal(searchCount, 0);
@@ -283,7 +283,7 @@ describe("StatementExecution", function() {
             // {
             //    _1: 1
             // }
-            return (await txn.execute(searchQuery)).getResultList()[0].elements()[0].numberValue();
+            return (await txn.execute(searchQuery)).getResultList()[0].get("_1").numberValue();
         });
         chai.assert.equal(searchCount, 0);
     });
