@@ -9,6 +9,7 @@ a way that isn't supported by the documentation.
    * Dead sessions are immediately discarded, reducing latency when using the driver.
    * `ClientError`, `DriverClosedError`, `LambdaAbortedError`, and `SessionPoolEmptyError` are now exported.
    * Peer dependency `aws-sdk` bumped to `2.841.0` or greater, which gives visibility to `CapacityExceededException`.
+ * Updated the exponential backoff algorithm to better align with the algorithm specified [here](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/).
 
 ## :warning: API Clean-up 
 
