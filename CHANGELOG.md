@@ -10,6 +10,7 @@ a way that isn't supported by the documentation.
    * `ClientError`, `DriverClosedError`, `LambdaAbortedError`, and `SessionPoolEmptyError` are now exported.
    * Peer dependency `aws-sdk` bumped to `2.841.0` or greater, which gives visibility to `CapacityExceededException`.
  * Updated the exponential backoff algorithm to better align with the algorithm specified [here](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/).
+ * Specify minimum Node.js version to 10.0 in [package.json](https://github.com/awslabs/amazon-qldb-driver-nodejs/blob/master/package.json#L13).
 
 ## :warning: API Clean-up 
 
