@@ -162,14 +162,16 @@ export function isBadRequestException(e: AWSError): boolean {
 }
 
 /**
- * Is the exception a retryable exception?
+ * Is the exception a retryable exception given the state of the session's transaction?
  * @param e The client error caught.
  * @returns True if the exception is a retryable exception. False otherwise.
  * 
  * @internal
  */
-export function isRetryableException(e: AWSError): boolean {
-    return isRetryableStatusCode(e) || isOccConflictException(e) || isNetworkingError(e) ||
+export function isRetryableException(e: AWSError, onCommit: boolean): boolean {
+    const canRetryNetworkError: boolean = onCommit ? false : isNetworkingError(e);
+
+    return isRetryableStatusCode(e) || isOccConflictException(e) || canRetryNetworkError ||
         (isInvalidSessionException(e) && !isTransactionExpiredException(e));
 }
 
@@ -195,6 +197,6 @@ function isNetworkingError(e: AWSError): boolean {
         return false;
     } else {
         const sourceError: AWSError = <AWSError> e.originalError;
-        return (sourceError.code == "NetworkingError");
+        return (sourceError.code === "NetworkingError");
     }
 }

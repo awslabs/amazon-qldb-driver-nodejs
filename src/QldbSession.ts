@@ -56,15 +56,17 @@ export class QldbSession {
     ): Promise<Type> {
         let transaction: Transaction;
         let transactionId: string = null;
+        let onCommit: boolean = false;
         try {
             transaction = await this._startTransaction();
             transactionId = transaction.getTransactionId();
             const executor: TransactionExecutor = new TransactionExecutor(transaction);
             const returnedValue: Type = await transactionLambda(executor);
+            onCommit = true;
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetryable: boolean = isRetryableException(e);
+            const isRetryable: boolean = isRetryableException(e, onCommit);
             const isISE: boolean = isInvalidSessionException(e);
             if (isISE && !isTransactionExpiredException(e)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
