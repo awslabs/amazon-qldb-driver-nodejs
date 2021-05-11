@@ -169,7 +169,7 @@ describe("Errors", () => {
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
-        it("shoud return true when error is SocketTimeoutException", () => {
+        it("should return true when error is SocketTimeoutException", () => {
             mockError.code = "SocketTimeoutException";
             mockError.statusCode = 200;
             chai.assert.isTrue(isRetryableException(mockError, false));
