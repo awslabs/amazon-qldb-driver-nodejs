@@ -1,6 +1,6 @@
 # Amazon QLDB Node.js Driver
 
-[![NPM Version](https://img.shields.io/badge/npm-v2.1.1-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)
+[![NPM Version](https://img.shields.io/badge/npm-v2.2.0-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)
 [![Documentation](https://img.shields.io/badge/docs-api-green.svg)](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html)
 [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/awslabs/amazon-qldb-driver-nodejs/blob/master/LICENSE)
 [![AWS Provider](https://img.shields.io/badge/provider-AWS-orange?logo=amazon-aws&color=ff9900)](https://aws.amazon.com/qldb/)
@@ -22,7 +22,7 @@ See [Setting Region](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer
 
 ### TypeScript 3.8.x
 
-The driver is written in, and requires, TypeScript 3.8.x. It will be automatically installed as a dependency. 
+Development of the driver requires TypeScript 3.8.x. It will be automatically installed as a dependency. It is also recommended to use TypeScript when using the driver.
 Please see the link below for more detail on TypeScript 3.8.x:
 
 * [TypeScript 3.8.x](https://www.npmjs.com/package/typescript)
