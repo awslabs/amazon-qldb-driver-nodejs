@@ -164,6 +164,7 @@ export function isBadRequestException(e: AWSError): boolean {
 /**
  * Is the exception a retryable exception given the state of the session's transaction?
  * @param e The client error caught.
+ * @param onCommit If the error caught was on a commit command.
  * @returns True if the exception is a retryable exception. False otherwise.
  * 
  * @internal
