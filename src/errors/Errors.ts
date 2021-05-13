@@ -170,9 +170,9 @@ export function isBadRequestException(e: AWSError): boolean {
  * @internal
  */
 export function isRetryableException(e: AWSError, onCommit: boolean): boolean {
-    const canRetryNetworkError: boolean = onCommit ? false : isNetworkingError(e);
+    const canSdkRetry: boolean = onCommit ? false : e.retryable;
 
-    return isRetryableStatusCode(e) || isOccConflictException(e) || canRetryNetworkError ||
+    return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
         (isInvalidSessionException(e) && !isTransactionExpiredException(e));
 }
 
@@ -186,18 +186,4 @@ function isRetryableStatusCode(e: AWSError): boolean {
            (e.statusCode === 503) ||
            (e.code === "NoHttpResponseException") ||
            (e.code === "SocketTimeoutException");
-}
-
-/**
- * Is the error caused by a network issue?
- * @param e The client error caught.
- * @returns True if the exception was caused by a network issue.
- */
-function isNetworkingError(e: AWSError): boolean {
-    if (!e.originalError) {
-        return false;
-    } else {
-        const sourceError: AWSError = <AWSError> e.originalError;
-        return (sourceError.code === "NetworkingError");
-    }
 }

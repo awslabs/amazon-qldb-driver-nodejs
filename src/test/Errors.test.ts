@@ -181,28 +181,21 @@ describe("Errors", () => {
             chai.assert.isFalse(isRetryableException(mockError, false));
         });
 
-        it("should appropriately handle networking errors", () => {
+        it("should appropriately handle retryable errors from the SDK", () => {
             const awsError: AWSError = <AWSError><any> sandbox.mock(Error);
-            const networkingError: AWSError = <AWSError><any> sandbox.mock(Error);
 
-            // Empty originalError causes false
-            awsError.originalError = undefined;
-            chai.assert.isFalse(isRetryableException(awsError, false));
-            chai.assert.isFalse(isRetryableException(awsError, true));
-
-            // Empty code in networking error causes false
-            awsError.originalError = networkingError;
-            networkingError.code = undefined;
+            // Empty retryable causes false
+            awsError.retryable = undefined;
             chai.assert.isFalse(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
             
-            // Wrong code in networking error causes false
-            networkingError.code = "NotNetworkingError";
+            // False retryable causes false
+            awsError.retryable = false;
             chai.assert.isFalse(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
 
-            // Right code causes true, but only if not on commit
-            networkingError.code = "NetworkingError";
+            // True retryable causes true, but only if not on commit
+            awsError.retryable = true;
             chai.assert.isTrue(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
         });
