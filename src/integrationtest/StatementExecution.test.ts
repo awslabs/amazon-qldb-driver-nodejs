@@ -115,15 +115,14 @@ describe("StatementExecution", function() {
 
         const searchStatement = `SELECT VALUE indexes[0] FROM information_schema.user_tables WHERE status = 'ACTIVE'` +
             `AND name = '${constants.TABLE_NAME}'`;
-        const indexColumn: string = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            const result: Result = await txn.execute(searchStatement);
-            // This gives:
-            // {
-            //    expr: "[MyColumn]"
-            // }
-            const indexColumn: string = result.getResultList()[0].get("expr").stringValue();
-            return indexColumn;
+        const indexResult: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchStatement);
         });
+        // This gives:
+        // {
+        //    expr: "[MyColumn]"
+        // }
+        const indexColumn: string = indexResult.getResultList()[0].get("expr").stringValue();
         chai.assert.equal(indexColumn, "[" + constants.INDEX_ATTRIBUTE + "]");
     });
 
@@ -147,9 +146,10 @@ describe("StatementExecution", function() {
 
         const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` +
             `${constants.COLUMN_NAME} = ?`;
-        const value: string = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE)).getResultList()[0].stringValue();
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE);
         });
+        const value: string = result.getResultList()[0].stringValue();
         chai.assert.equal(value, constants.SINGLE_DOCUMENT_VALUE);
     });
 
@@ -165,9 +165,10 @@ describe("StatementExecution", function() {
             
         const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM "${constants.TABLE_NAME}" WHERE ` +
             `${constants.COLUMN_NAME} = ?`;
-        const value: string = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE)).getResultList()[0].stringValue();
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return (await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE));
         });
+        const value: string = result.getResultList()[0].stringValue();
         chai.assert.equal(value, constants.SINGLE_DOCUMENT_VALUE);
     });
 
@@ -186,12 +187,12 @@ describe("StatementExecution", function() {
 
         const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` + 
             `${constants.COLUMN_NAME} IN (?,?)`;
-        const tables: string[] = await driver.executeLambda(async (txn: TransactionExecutor) => {
+        const domValues: dom.Value[] = await driver.executeLambda(async (txn: TransactionExecutor) => {
             const result: Result = await txn.execute(searchQuery, constants.MULTI_DOC_VALUE_1, constants.MULTI_DOC_VALUE_2);
-            const resultSet: dom.Value[] = result.getResultList();
-            return resultSet.map((value: dom.Value) => {
-                return value.stringValue();
-            });
+            return result.getResultList();
+        });
+        const tables: string[] = domValues.map((value: dom.Value) => {
+            return value.stringValue();
         });
         chai.assert.isTrue(tables.includes(constants.MULTI_DOC_VALUE_1));
         chai.assert.isTrue(tables.includes(constants.MULTI_DOC_VALUE_2));
@@ -214,14 +215,15 @@ describe("StatementExecution", function() {
         chai.assert.equal(deleteCount, 1);
 
         const searchQuery: string = `SELECT COUNT(*) FROM ${constants.TABLE_NAME}`;
-        const searchCount: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            // This gives:
-            // {
-            //    _1: 1
-            // }
-            return (await txn.execute(searchQuery)).getResultList()[0].get("_1").numberValue();
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchQuery);
         });
 
+        // This gives:
+        // {
+        //    _1: 1
+        // }
+        const searchCount: number = result.getResultList()[0].get("_1").numberValue();
         chai.assert.equal(searchCount, 0);
     });
 
@@ -278,13 +280,15 @@ describe("StatementExecution", function() {
         chai.assert.equal(deleteCount, 2);
 
         const searchQuery: string = `SELECT COUNT(*) FROM ${constants.TABLE_NAME}`;
-        const searchCount: number = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            // This gives:
-            // {
-            //    _1: 1
-            // }
-            return (await txn.execute(searchQuery)).getResultList()[0].get("_1").numberValue();
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchQuery);
         });
+
+        // This gives:
+        // {
+        //    _1: 1
+        // }
+        const searchCount: number = result.getResultList()[0].get("_1").numberValue();
         chai.assert.equal(searchCount, 0);
     });
 
@@ -373,9 +377,11 @@ describe("StatementExecution", function() {
 
         const searchQuery: string = `SELECT VALUE ${constants.COLUMN_NAME} FROM ${constants.TABLE_NAME} WHERE ` +
             `${constants.COLUMN_NAME} = ?`;
-        const value: string = await driver.executeLambda(async (txn: TransactionExecutor) => {
-            return (await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE)).getResultList()[0].stringValue();
+        const result: Result = await driver.executeLambda(async (txn: TransactionExecutor) => {
+            return await txn.execute(searchQuery, constants.SINGLE_DOCUMENT_VALUE);
         });
+
+        const value: string = result.getResultList()[0].stringValue();
         chai.assert.equal(value, constants.SINGLE_DOCUMENT_VALUE);
     });
 
