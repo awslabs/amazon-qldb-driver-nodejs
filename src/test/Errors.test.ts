@@ -154,31 +154,50 @@ describe("Errors", () => {
         it("should return true with statusCode 500", () => {
             mockError.code = "NotRetryableException";
             mockError.statusCode = 500;
-            chai.assert.isTrue(isRetryableException(mockError));
+            chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should reeturn true with statusCode 503", () => {
             mockError.code = "NotRetryableException";
             mockError.statusCode = 503;
-            chai.assert.isTrue(isRetryableException(mockError));
+            chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should return true when error is NoHttpResponseException", () => {
             mockError.code = "NoHttpResponseException";
             mockError.statusCode = 200;
-            chai.assert.isTrue(isRetryableException(mockError));
+            chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
-        it("shoud return true when error is SocketTimeoutException", () => {
+        it("should return true when error is SocketTimeoutException", () => {
             mockError.code = "SocketTimeoutException";
             mockError.statusCode = 200;
-            chai.assert.isTrue(isRetryableException(mockError));
+            chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should return false when not a retryable exception", () => {
             mockError.code = "NotRetryableException";
             mockError.statusCode = 200;
-            chai.assert.isFalse(isRetryableException(mockError));
+            chai.assert.isFalse(isRetryableException(mockError, false));
+        });
+
+        it("should appropriately handle retryable errors from the SDK", () => {
+            const awsError: AWSError = <AWSError><any> sandbox.mock(Error);
+
+            // Empty retryable causes false
+            awsError.retryable = undefined;
+            chai.assert.isFalse(isRetryableException(awsError, false));
+            chai.assert.isFalse(isRetryableException(awsError, true));
+            
+            // False retryable causes false
+            awsError.retryable = false;
+            chai.assert.isFalse(isRetryableException(awsError, false));
+            chai.assert.isFalse(isRetryableException(awsError, true));
+
+            // True retryable causes true, but only if not on commit
+            awsError.retryable = true;
+            chai.assert.isTrue(isRetryableException(awsError, false));
+            chai.assert.isFalse(isRetryableException(awsError, true));
         });
     });
 

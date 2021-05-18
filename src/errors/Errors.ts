@@ -162,14 +162,17 @@ export function isBadRequestException(e: AWSError): boolean {
 }
 
 /**
- * Is the exception a retryable exception?
+ * Is the exception a retryable exception given the state of the session's transaction?
  * @param e The client error caught.
+ * @param onCommit If the error caught was on a commit command.
  * @returns True if the exception is a retryable exception. False otherwise.
  * 
  * @internal
  */
-export function isRetryableException(e: AWSError): boolean {
-    return isRetryableStatusCode(e) || isOccConflictException(e) || 
+export function isRetryableException(e: AWSError, onCommit: boolean): boolean {
+    const canSdkRetry: boolean = onCommit ? false : e.retryable;
+
+    return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
         (isInvalidSessionException(e) && !isTransactionExpiredException(e));
 }
 

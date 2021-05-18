@@ -198,9 +198,10 @@ export class QldbDriver {
                     }
                     return session;
                 } catch (e) {
-                    // An error when failing to start a new session is always retryable
                     thisDriver._semaphore.release();
                     thisDriver._availablePermits++;
+            
+                    // An error when failing to start a new session is always retryable
                     throw new ExecuteError(e, true, true);
                 }
             } else {
