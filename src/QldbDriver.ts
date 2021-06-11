@@ -13,7 +13,6 @@
 
 import { QLDBSession } from "aws-sdk";
 import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
-import { globalAgent } from "http";
 import { dom } from "ion-js";
 import Semaphore from "semaphore-async-await";
 
@@ -31,6 +30,8 @@ import { BackoffFunction } from "./retry/BackoffFunction";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
+
+const DEFAULT_MAX_SOCKETS = 32;
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
@@ -73,18 +74,21 @@ export class QldbDriver {
      * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retryConfig
      *                    is passed to {@linkcode executeLambda}.
      *
+     * @param qldbSessionFactory the means of creating a QLDBSession. For most use cases it it not required to pass this in.
+     *
      * @throws RangeError if `maxConcurrentTransactions` is less than 0.
      */
     constructor(
         ledgerName: string,
         qldbClientOptions: ClientConfiguration = {},
         maxConcurrentTransactions: number = 0,
-        retryConfig: RetryConfig = defaultRetryConfig
+        retryConfig: RetryConfig = defaultRetryConfig,
+        qldbSessionFactory: (options: ClientConfiguration ) => QLDBSession = () => new QLDBSession(qldbClientOptions)
     ) {
         qldbClientOptions.customUserAgent = `QLDB Driver for Node.js v${version}`;
         qldbClientOptions.maxRetries = 0;
 
-        this._qldbClient = new QLDBSession(qldbClientOptions);
+        this._qldbClient = qldbSessionFactory(qldbClientOptions);
         this._ledgerName = ledgerName;
         this._isClosed = false;
         this._retryConfig = retryConfig;
@@ -93,12 +97,9 @@ export class QldbDriver {
             throw new RangeError("Value for maxConcurrentTransactions cannot be negative.");
         }
 
-        let maxSockets: number;
-        if (qldbClientOptions.httpOptions && qldbClientOptions.httpOptions.agent) {
-            maxSockets = qldbClientOptions.httpOptions.agent.maxSockets;
-        } else {
-            maxSockets = globalAgent.maxSockets;
-        }
+        const maxSockets = qldbClientOptions.httpOptions && qldbClientOptions.httpOptions.agent
+            ? qldbClientOptions.httpOptions.agent.maxSockets
+            : DEFAULT_MAX_SOCKETS;
 
         if (0 === maxConcurrentTransactions) {
             this._maxConcurrentTransactions = maxSockets;
