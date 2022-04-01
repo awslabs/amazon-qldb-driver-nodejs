@@ -11,11 +11,7 @@
  * and limitations under the License.
  */
 
-import {
-    ExecuteStatementResult,
-    FetchPageResult,
-    Page,
-} from "aws-sdk/clients/qldbsession";
+import { ExecuteStatementResult, FetchPageResult, Page } from "@aws-sdk/client-qldb-session";
 import { dom } from "ion-js";
 import { Readable } from "stream";
 
@@ -121,7 +117,7 @@ export class ResultReadable extends Readable {
 
                     this._retrieveIndex = 0;
                 } catch (e) {
-                    this.destroy(e);
+                    this.destroy(e as Error);
                     canPush = false;
                     return;
                 }

@@ -1,12 +1,14 @@
 {
   "dependencies": {
-    "@types/node": "^12.0.2",
+    "@aws-sdk/client-qldb": "^3.58.0",
+    "@aws-sdk/client-qldb-session": "^3.58.0",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
   "name": "amazon-qldb-driver-nodejs",
   "description": "The Node.js driver for working with Amazon Quantum Ledger Database",
-  "version": "2.2.0",
+  "version": "3.0.0",
+  "logging": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
@@ -16,10 +18,10 @@
     "@types/chai": "^4.2.10",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^5.2.7",
+    "@types/node": "^12.20.47",
     "@types/sinon": "^7.0.13",
     "@typescript-eslint/eslint-plugin": "^2.5.0",
     "@typescript-eslint/parser": "^2.5.0",
-    "aws-sdk": "^2.841.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^6.0.3",
@@ -37,7 +39,6 @@
     "typescript": "^3.8.0"
   },
   "peerDependencies": {
-    "aws-sdk": "^2.841.0",
     "ion-js": "^4.0.0",
     "jsbi": "^3.1.1"
   },

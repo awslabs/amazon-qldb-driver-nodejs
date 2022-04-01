@@ -11,9 +11,7 @@
  * and limitations under the License.
  */
 
-import { config } from "aws-sdk";
-
-import { version } from "../package.json";
+import { version, logging } from "../package.json";
 
 /**
  * Logs a debug level message.
@@ -55,7 +53,7 @@ export function info(line: string): void {
  * @returns A boolean indicating whether a logger has been set within the AWS SDK.
  */
 function isLoggerSet(): boolean {
-    return config.logger !== null;
+    return logging;
 }
 
 /**
@@ -89,11 +87,5 @@ export function warn(line: string): void {
  * @param level The log level.
  */
 function _prepend(line: any, level: string): void {
-    if (config.logger) {
-        if (typeof config.logger.log === "function") {
-            config.logger.log(`[${level}][Javascript QLDB Driver, Version: ${version}] ${line}`);
-        } else if (typeof config.logger.write === "function") {
-            config.logger.write(`[${level}][Javascript QLDB Driver, Version: ${version}] ${line}\n`);
-        }
-    }
+    console.log(`[${level}][Javascript QLDB Driver, Version: ${version}] ${line}`);
 }

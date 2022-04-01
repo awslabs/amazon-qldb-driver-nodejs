@@ -14,13 +14,7 @@
 // Test environment imports
 import "mocha";
 
-import {
-    ExecuteStatementResult,
-    IOUsage as sdkIOUsage,
-    Page,
-    TimingInformation as sdkTimingInformation,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
+import { ExecuteStatementResult, Page, ValueHolder, TimingInformation as sdkTimingInformation, IOUsage as sdkIOUsage } from "@aws-sdk/client-qldb-session";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom } from "ion-js";
@@ -31,6 +25,9 @@ import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
 import { IOUsage } from "../stats/IOUsage";
 import { TimingInformation } from "../stats/TimingInformation";
+import { TextEncoder } from "util";
+
+const enc = new TextEncoder();
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -38,7 +35,7 @@ const sandbox = sinon.createSandbox();
 const testTransactionId: string = "txnId";
 const testMessage: string = "foo";
 const testValueHolder: ValueHolder = {
-    IonBinary: "ionBinary"
+    IonBinary: enc.encode("ionBinary")
 };
 const testValues: ValueHolder[] = [testValueHolder, testValueHolder, testValueHolder];
 const testPage: Page = {

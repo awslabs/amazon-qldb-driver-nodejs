@@ -11,10 +11,14 @@
  * and limitations under the License.
  */
 
-import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
+import { 
+    CommitTransactionResult, 
+    ExecuteStatementResult, 
+    QLDBSessionServiceException, 
+    ValueHolder 
+} from "@aws-sdk/client-qldb-session";
 import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
-
 import { Communicator } from "./Communicator";
 import { ClientError } from "./errors/Errors";
 import { QldbHash } from "./QldbHash";
@@ -137,8 +141,12 @@ export class Transaction {
                 try {
                     ionBinary = dumpBinary(param);
                 } catch(e) {
-                    e.message = `Failed to convert parameter ${String(param)} to Ion Binary: ${e.message}`;
-                    throw e;
+                    if (e instanceof QLDBSessionServiceException) {
+                        e.message = `Failed to convert parameter ${String(param)} to Ion Binary: ${e.message}`;
+                        throw e;
+                    }
+                    // TODO: should this line even exist?
+                    throw new Error("Error not instance of QLDBSessionServiceException");
                 }
                 statementHash = statementHash.dot(QldbHash.toQldbHash(ionBinary));
                 const valueHolder: ValueHolder = {

@@ -14,40 +14,43 @@
 // Test environment imports
 import "mocha";
 
-import { QLDBSession } from "aws-sdk";
-import {
-    ClientConfiguration,
+import { 
+    QLDBSession,
+    QLDBSessionClientConfig,
     CommitTransactionResult,
     ExecuteStatementResult,
     Page,
-    PageToken,
     SendCommandRequest,
     SendCommandResult,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
+    ValueHolder,
+    QLDBSessionClient,
+    SendCommandCommand,
+    SendCommandCommandInput
+} from "@aws-sdk/client-qldb-session";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
-import * as LogUtil from "../LogUtil";
+import { TextEncoder } from "util";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
 const testLedgerName: string = "fakeLedgerName";
 const testMessage: string = "foo";
-const testPageToken: PageToken = "pageToken";
+const testPageToken: string = "pageToken";
 const testSessionToken: string = "sessionToken";
+const enc = new TextEncoder();
 const testValueHolder: ValueHolder = {
-    IonBinary: 'test'
+    IonBinary: enc.encode("text")
 };
 const testParameters: ValueHolder[] = [testValueHolder];
 const testStatement: string = "SELECT * FROM foo";
 const testTransactionId: string = "txnId";
 const testHashToQldb: Uint8Array = new Uint8Array([1, 2, 3]);
 const testHashFromQldb: Uint8Array = new Uint8Array([4, 5, 6]);
-const testLowLevelClientOptions: ClientConfiguration = {
+const testLowLevelClientOptions: QLDBSessionClientConfig = {
     region: "fakeRegion"
 };
 
@@ -81,12 +84,8 @@ describe("Communicator", () => {
 
     beforeEach(async () => {
         testQldbLowLevelClient = new QLDBSession(testLowLevelClientOptions);
-        sendCommandStub = sandbox.stub(testQldbLowLevelClient, "sendCommand");
-        sendCommandStub.returns({
-            promise: () => {
-                return testSendCommandResult;
-            }
-        });
+        sendCommandStub = sandbox.stub(testQldbLowLevelClient, "send");
+        sendCommandStub.resolves(testSendCommandResult);
         communicator = await Communicator.create(testQldbLowLevelClient, testLedgerName);
     });
 
@@ -114,27 +113,23 @@ describe("Communicator", () => {
     describe("#abortTransaction()", () => {
         it("should call AWS SDK's sendCommand with abort request when called", async () => {
             await communicator.abortTransaction();
-            const testRequest: SendCommandRequest = {
+            const testRequest: SendCommandCommandInput = {
                 SessionToken: testSessionToken,
                 AbortTransaction: {}
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
-            const testRequest: SendCommandRequest = {
+            sendCommandStub.rejects(testMessage);
+            const testRequest: SendCommandCommandInput = {
                 SessionToken: testSessionToken,
                 AbortTransaction: {}
             };
             await chai.expect(communicator.abortTransaction()).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
@@ -149,16 +144,12 @@ describe("Communicator", () => {
                 }
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(commitResult, testSendCommandResult.CommitTransaction);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
+            sendCommandStub.rejects(testMessage);
             const testRequest: SendCommandRequest = {
                 SessionToken: testSessionToken,
                 CommitTransaction: {
@@ -168,7 +159,7 @@ describe("Communicator", () => {
             };
             await chai.expect(communicator.commit(testTransactionId, testHashToQldb)).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
@@ -188,7 +179,7 @@ describe("Communicator", () => {
                 }
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(result, testExecuteStatementResult);
         });
 
@@ -207,16 +198,12 @@ describe("Communicator", () => {
                 }
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(result, testExecuteStatementResult);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
+            sendCommandStub.rejects(testMessage);
             const testRequest: SendCommandRequest = {
                 SessionToken: testSessionToken,
                 ExecuteStatement: {
@@ -227,7 +214,7 @@ describe("Communicator", () => {
             };
             await chai.expect(communicator.executeStatement(testTransactionId, testStatement, [])).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
@@ -239,22 +226,18 @@ describe("Communicator", () => {
                 SessionToken: testSessionToken
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
+            sendCommandStub.rejects(testMessage);
             const testRequest: SendCommandRequest = {
                 EndSession: {},
                 SessionToken: testSessionToken
             };
             await chai.expect(communicator.endSession()).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
@@ -269,16 +252,12 @@ describe("Communicator", () => {
                 }
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(page, testPage);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
+            sendCommandStub.rejects(testMessage);
             const testRequest: SendCommandRequest = {
                 SessionToken: testSessionToken,
                 FetchPage: {
@@ -288,14 +267,14 @@ describe("Communicator", () => {
             };
             await chai.expect(communicator.fetchPage(testTransactionId, testPageToken)).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
 
     describe("#getQldbClient()", () => {
         it("should return the low level client when called", () => {
-            const lowLevelClient: QLDBSession = communicator.getQldbClient();
+            const lowLevelClient: QLDBSessionClient = communicator.getQldbClient();
             chai.assert.equal(lowLevelClient, testQldbLowLevelClient);
         });
     });
@@ -315,42 +294,39 @@ describe("Communicator", () => {
                 StartTransaction: {}
             };
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, testRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(txnId, testTransactionId);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
+            sendCommandStub.rejects(testMessage);
             const testRequest: SendCommandRequest = {
                 SessionToken: testSessionToken,
                 StartTransaction: {}
             };
             await chai.expect(communicator.startTransaction()).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
     });
 
     describe("#_sendCommand()", () => {
         it("should return a SendCommandResult object when called", async () => {
-            const mockSendCommandRequest: SendCommandRequest = {};
+            const testRequest: SendCommandRequest = {
+                SessionToken: testSessionToken
+            };
+            const mockSendCommandRequest: SendCommandCommand = new SendCommandCommand(testRequest);
             const result: SendCommandResult = await communicator["_sendCommand"](mockSendCommandRequest);
             sinon.assert.calledTwice(sendCommandStub);
-            sinon.assert.calledWith(sendCommandStub, mockSendCommandRequest);
+            chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
             chai.assert.equal(result, testSendCommandResult);
         });
 
         it("should return a rejected promise when error is thrown", async () => {
-            sendCommandStub.returns({
-                promise: () => {
-                    throw new Error(testMessage);
-                }
-            });
-            const mockSendCommandRequest: SendCommandRequest = {};
+            sendCommandStub.rejects(testMessage);
+            const mockSendCommandRequest: SendCommandCommand = new SendCommandCommand({
+                SessionToken: testSessionToken
+            })
             const sendCommand = communicator["_sendCommand"];
             await chai.expect(sendCommand(mockSendCommandRequest)).to.be.rejected;
         });

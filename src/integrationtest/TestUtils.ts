@@ -11,39 +11,43 @@
  * and limitations under the License.
  */
 
-import { QLDB } from "aws-sdk";
-import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
-import {
-    CreateLedgerRequest,
-    CreateLedgerResponse,
-    DeleteLedgerRequest,
-    DescribeLedgerRequest,
-    DescribeLedgerResponse,
-    UpdateLedgerRequest
-} from "aws-sdk/clients/qldb";
-import { dom, IonType, load } from "ion-js";
+import { dom, load } from "ion-js";
 
 import * as mocharc from './.mocharc.json'
 import { isResourceNotFoundException } from "../errors/Errors";
 import { Result } from "../Result";
 import * as constants from "./TestConstants";
 import { TransactionExecutor } from "../TransactionExecutor";
+import { 
+    CreateLedgerCommand,
+    CreateLedgerRequest, 
+    CreateLedgerResponse, 
+    DeleteLedgerCommand, 
+    DeleteLedgerRequest, 
+    DescribeLedgerCommand, 
+    DescribeLedgerRequest, 
+    DescribeLedgerResponse, 
+    QLDBClient, 
+    QLDBClientConfig, 
+    UpdateLedgerCommand, 
+    UpdateLedgerRequest 
+} from "@aws-sdk/client-qldb";
 
 export class TestUtils {
     public ledgerName: string;
     public regionName: string;
-    public clientConfig: ClientConfiguration;
-    public qldbClient: QLDB;
+    public clientConfig: QLDBClientConfig;
+    public qldbClient: QLDBClient;
 
     constructor(ledgerName: string) {
         this.ledgerName = ledgerName;
         this.regionName = mocharc.region;
         this.clientConfig = this.createClientConfiguration();
-        this.qldbClient = new QLDB(this.clientConfig);
+        this.qldbClient = new QLDBClient(this.clientConfig);
     }
     
-    createClientConfiguration() : ClientConfiguration {
-        const config: ClientConfiguration = {};
+    createClientConfiguration() : QLDBClientConfig {
+        const config: QLDBClientConfig = {};
         if (this.regionName != undefined) {
             config.region = this.regionName;
         }
@@ -60,7 +64,8 @@ export class TestUtils {
             Name: this.ledgerName,
             PermissionsMode: "ALLOW_ALL"
         }
-        const response: CreateLedgerResponse = await this.qldbClient.createLedger(request).promise();
+        const command = new CreateLedgerCommand(request);
+        const response: CreateLedgerResponse = await this.qldbClient.send(command);
         console.log(`Success. Ledger state: ${response.State}.`);
         await this.waitForActive();
     }
@@ -71,7 +76,8 @@ export class TestUtils {
             Name: this.ledgerName
         }
         while (true) {
-            const result: DescribeLedgerResponse = await this.qldbClient.describeLedger(request).promise();
+            const command = new DescribeLedgerCommand(request);
+            const result: DescribeLedgerResponse = await this.qldbClient.send(command);
             if (result.State === "ACTIVE") {
                 console.log("Success. Ledger is active and ready to be used.");
                 return;
@@ -106,7 +112,8 @@ export class TestUtils {
         const request: DeleteLedgerRequest = {
             Name: this.ledgerName
         };
-        await this.qldbClient.deleteLedger(request).promise();
+        const command = new DeleteLedgerCommand(request);
+        await this.qldbClient.send(command);
     }
 
     private async waitForDeletion(): Promise<void> {
@@ -116,7 +123,8 @@ export class TestUtils {
         };
         while (true) {
             try {
-                await this.qldbClient.describeLedger(request).promise();
+                const command = new DescribeLedgerCommand(request);
+                await this.qldbClient.send(command);
                 console.log("The ledger is still being deleted. Please wait...");
                 await TestUtils.sleep(10000);
             } catch (e) {
@@ -135,7 +143,8 @@ export class TestUtils {
             Name: this.ledgerName,
             DeletionProtection: false
         }
-        await this.qldbClient.updateLedger(request).promise();
+        const command = new UpdateLedgerCommand(request);
+        await this.qldbClient.send(command);
     }
 
     async readIonValue(txn: TransactionExecutor, value: dom.Value): Promise<dom.Value> {
