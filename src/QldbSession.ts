@@ -11,7 +11,7 @@
  * and limitations under the License.
  */
 
-import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
+import { StartTransactionResult } from "@aws-sdk/client-qldb-session";
 
 import { Communicator } from "./Communicator";
 import {
@@ -66,16 +66,16 @@ export class QldbSession {
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetryable: boolean = isRetryableException(e, onCommit);
-            const isISE: boolean = isInvalidSessionException(e);
-            if (isISE && !isTransactionExpiredException(e)) {
+            const isRetryable: boolean = isRetryableException(e as Error, onCommit);
+            const isISE: boolean = isInvalidSessionException(e as Error);
+            if (isISE && !isTransactionExpiredException(e as Error)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
                 this._isAlive = false;
-            } else if (!isOccConflictException(e)) {
+            } else if (!isOccConflictException(e as Error)) {
                 // OCC does not need session state reset as the transaction is implicitly closed
                 await this._cleanSessionState();
             }
-            throw new ExecuteError(e, isRetryable, isISE, transactionId);
+            throw new ExecuteError(e as Error, isRetryable, isISE, transactionId);
         }
     }
 

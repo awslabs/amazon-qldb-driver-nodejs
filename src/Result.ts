@@ -10,14 +10,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-
-import {
-    ExecuteStatementResult,
-    FetchPageResult,
-    IonBinary,
-    Page,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
+import { ExecuteStatementResult, FetchPageResult, Page, ValueHolder } from "@aws-sdk/client-qldb-session";
 import { dom } from "ion-js";
 
 import { Communicator } from "./Communicator";
@@ -25,6 +18,9 @@ import { ClientError } from "./errors/Errors"
 import { ResultReadable } from "./ResultReadable";
 import { IOUsage } from "./stats/IOUsage";
 import { TimingInformation } from "./stats/TimingInformation";
+
+interface Blob {}
+export type IonBinary = Buffer|Uint8Array|Blob|string;
 
 /**
  * A class representing a fully buffered set of results returned from QLDB.

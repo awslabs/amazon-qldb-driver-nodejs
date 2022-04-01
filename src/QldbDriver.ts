@@ -11,8 +11,12 @@
  * and limitations under the License.
  */
 
-import { QLDBSession } from "aws-sdk";
-import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
+import { 
+    QLDBSession,  
+    QLDBSessionClient,   
+    QLDBSessionClientConfig,  
+    QLDBSessionServiceException 
+} from "@aws-sdk/client-qldb-session";
 import { globalAgent } from "http";
 import { dom } from "ion-js";
 import Semaphore from "semaphore-async-await";
@@ -31,6 +35,7 @@ import { BackoffFunction } from "./retry/BackoffFunction";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
+import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
@@ -54,7 +59,7 @@ export class QldbDriver {
     private _availablePermits: number;
     private _sessionPool: QldbSession[];
     private _semaphore: Semaphore;
-    private _qldbClient: QLDBSession;
+    private _qldbClient: QLDBSessionClient;
     private _ledgerName: string;
     private _isClosed: boolean;
     private _retryConfig: RetryConfig;
@@ -65,7 +70,7 @@ export class QldbDriver {
      *
      * @param ledgerName The name of the ledger you want to connect to. This is a mandatory parameter.
      * @param qldbClientOptions The object containing options for configuring the low level client.
-     *                          See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/QLDBSession.html#constructor-details|Low Level Client Constructor}.
+     *                          See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor}.
      * @param maxConcurrentTransactions The driver internally uses a pool of sessions to execute the transactions.
      *                                  The maxConcurrentTransactions parameter specifies the number of sessions that the driver can hold in the pool.
      *                                  The default is set to maximum number of sockets specified in the globalAgent.
@@ -77,12 +82,13 @@ export class QldbDriver {
      */
     constructor(
         ledgerName: string,
-        qldbClientOptions: ClientConfiguration = {},
+        qldbClientOptions: QLDBSessionClientConfig = {},
+        httpOptions: NodeHttpHandlerOptions = {},
         maxConcurrentTransactions: number = 0,
         retryConfig: RetryConfig = defaultRetryConfig
     ) {
         qldbClientOptions.customUserAgent = `QLDB Driver for Node.js v${version}`;
-        qldbClientOptions.maxRetries = 0;
+        qldbClientOptions.maxAttempts = 0;
 
         this._qldbClient = new QLDBSession(qldbClientOptions);
         this._ledgerName = ledgerName;
@@ -94,8 +100,8 @@ export class QldbDriver {
         }
 
         let maxSockets: number;
-        if (qldbClientOptions.httpOptions && qldbClientOptions.httpOptions.agent) {
-            maxSockets = qldbClientOptions.httpOptions.agent.maxSockets;
+        if (httpOptions.httpAgent) {
+            maxSockets = httpOptions.httpAgent.maxSockets;
         } else {
             maxSockets = globalAgent.maxSockets;
         }
@@ -198,11 +204,15 @@ export class QldbDriver {
                     }
                     return session;
                 } catch (e) {
-                    thisDriver._semaphore.release();
-                    thisDriver._availablePermits++;
-            
-                    // An error when failing to start a new session is always retryable
-                    throw new ExecuteError(e, true, true);
+                    if (e instanceof QLDBSessionServiceException) {
+                        thisDriver._semaphore.release();
+                        thisDriver._availablePermits++;
+                
+                        // An error when failing to start a new session is always retryable
+                        throw new ExecuteError(e, true, true);
+                    }
+                    // TODO: should this line even exist?
+                    throw new Error("Error not instance of QLDBSessionServiceException");
                 }
             } else {
                 throw new SessionPoolEmptyError()

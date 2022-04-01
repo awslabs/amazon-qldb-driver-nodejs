@@ -14,25 +14,21 @@
 // Test environment imports
 import "mocha";
 
-import {
-    ExecuteStatementResult,
-    IonBinary,
-    IOUsage as sdkIOUsage,
-    Page,
-    TimingInformation as sdkTimingInformation,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { dom, IonType, IonTypes} from "ion-js";
+import { dom, IonType, IonTypes, load} from "ion-js";
 import * as sinon from "sinon";
 
 import { Communicator } from "../Communicator";
 import { ClientError } from "../errors/Errors";
-import { Result } from "../Result";
+import { IonBinary, Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
 import { IOUsage } from "../stats/IOUsage";
 import { TimingInformation } from "../stats/TimingInformation";
+import { ExecuteStatementResult, Page, ValueHolder, TimingInformation as sdkTimingInformation, IOUsage as sdkIOUsage } from "@aws-sdk/client-qldb-session";
+import { TextEncoder } from "util";
+
+const enc = new TextEncoder();
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -63,6 +59,7 @@ const testExecuteResult: ExecuteStatementResult = {
 };
 const testIOUsage: IOUsage = new IOUsage(5);
 const testTimingInfo: TimingInformation = new TimingInformation(20);
+
 
 const mockCommunicator: Communicator = <Communicator><any> sandbox.mock(Communicator);
 
@@ -100,10 +97,10 @@ describe("Result", () => {
 
     describe("#getResultList()", () => {
         it("should return a list of Ion values when called", async () => {
-            const value1: ValueHolder = {IonBinary: "a"};
-            const value2: ValueHolder = {IonBinary: "b"};
-            const value3: ValueHolder = {IonBinary: "c"};
-            const value4: ValueHolder = {IonBinary: "d"};
+            const value1: ValueHolder = {IonBinary: enc.encode("a")};
+            const value2: ValueHolder = {IonBinary: enc.encode("b")};
+            const value3: ValueHolder = {IonBinary: enc.encode("c")};
+            const value4: ValueHolder = {IonBinary: enc.encode("d")};
             const allValues: ValueHolder[] = [value1, value2, value3, value4];
             const finalTestPage: Page = {Values: allValues};
 
@@ -116,9 +113,9 @@ describe("Result", () => {
             const resultList: dom.Value[] = result.getResultList();
 
             resultList.forEach((result, i) => {
-                chai.assert.equal(
+                chai.assert.deepEqual(
                     result,
-                    allValues[i].IonBinary
+                    load(allValues[i].IonBinary)
                 );
             });
         });
@@ -139,19 +136,19 @@ describe("Result", () => {
                 IonTypes.LIST,
                 IonTypes.STRUCT
             ];
-            const nullValue: ValueHolder = {IonBinary: "null"};
-            const bool: ValueHolder = {IonBinary: "true"};
-            const int: ValueHolder = {IonBinary: "5"};
-            const float: ValueHolder = {IonBinary: "5e3"};
-            const decimal: ValueHolder = {IonBinary: "5.5"};
-            const time: ValueHolder = {IonBinary: "2017-01-01"};
-            const symbol: ValueHolder = {IonBinary: "Symbol"};
-            const string: ValueHolder = {IonBinary: "\"String\""};
-            const clob: ValueHolder = {IonBinary: "{{ \"clob\" }}"};
-            const blob: ValueHolder = {IonBinary: "{{ blob }}"};
-            const sexp: ValueHolder = {IonBinary: "(1 2 3)"};
-            const list: ValueHolder = {IonBinary: "[1, 2, 3]"};
-            const struct: ValueHolder = {IonBinary: "{key: val}"};
+            const nullValue: ValueHolder = {IonBinary: enc.encode("null")};
+            const bool: ValueHolder = {IonBinary: enc.encode("true")};
+            const int: ValueHolder = {IonBinary: enc.encode("5")};
+            const float: ValueHolder = {IonBinary: enc.encode("5e3")};
+            const decimal: ValueHolder = {IonBinary: enc.encode("5.5")};
+            const time: ValueHolder = {IonBinary: enc.encode("2017-01-01")};
+            const symbol: ValueHolder = {IonBinary: enc.encode("Symbol")};
+            const string: ValueHolder = {IonBinary: enc.encode("\"String\"")};
+            const clob: ValueHolder = {IonBinary: enc.encode("{{ \"clob\" }}")};
+            const blob: ValueHolder = {IonBinary: enc.encode("{{ blob }}")};
+            const sexp: ValueHolder = {IonBinary: enc.encode("(1 2 3)")};
+            const list: ValueHolder = {IonBinary: enc.encode("[1, 2, 3]")};
+            const struct: ValueHolder = {IonBinary: enc.encode("{key: val}")};
             const allValues: ValueHolder[] = [
                 nullValue,
                 bool,
@@ -181,7 +178,7 @@ describe("Result", () => {
             const resultList: dom.Value[] = result.getResultList();
 
             resultList.forEach((result, i) => {
-                chai.assert.equal(
+                chai.assert.deepEqual(
                     result.getType(),
                     expectedTypes[i]
                 );
@@ -189,7 +186,7 @@ describe("Result", () => {
         });
 
         it("should return a list of Ion values for nested ion containers with correct Ion types", async () => {
-            const allValues: ValueHolder[] = [{IonBinary: "{key: ([1, 2] {innerStruct: [3]} 4)}"}];
+            const allValues: ValueHolder[] = [{IonBinary: enc.encode("{key: ([1, 2] {innerStruct: [3]} 4)}")}];
             const finalTestPage: Page = {Values: allValues};
 
             mockCommunicator.fetchPage = async () => {
@@ -209,15 +206,15 @@ describe("Result", () => {
         });
 
         it("should return a list of Ion values that include the initial Page when called", async () => {
-            const value1: ValueHolder = {IonBinary: "a"};
-            const value2: ValueHolder = {IonBinary: "b"};
-            const value3: ValueHolder = {IonBinary: "c"};
-            const value4: ValueHolder = {IonBinary: "d"};
+            const value1: ValueHolder = {IonBinary: enc.encode("a")};
+            const value2: ValueHolder = {IonBinary: enc.encode("b")};
+            const value3: ValueHolder = {IonBinary: enc.encode("c")};
+            const value4: ValueHolder = {IonBinary: enc.encode("d")};
             const allValues: ValueHolder[] = [value1, value2, value3, value4];
             const finalTestPage: Page = {Values: allValues};
 
             const testValueHolder: ValueHolder[] = [{
-                IonBinary: "testVal"
+                IonBinary: enc.encode("testVal")
             }];
             const testPageWithTokenAndValue: Page = {
                 Values: testValueHolder,
@@ -237,25 +234,25 @@ describe("Result", () => {
 
             chai.assert.equal(allValues.length + testValueHolder.length, resultList.length);
             // Need to check if the initial Page's value and the first element in resultList is equivalent.
-            chai.assert.equal(
+            chai.assert.deepEqual(
                 resultList[0],
-                testValueHolder[0].IonBinary
+                load(testValueHolder[0].IonBinary)
             );
 
             // Now check if the rest of the resultList matches up with the Page's values returned from the Communicator.
             for (let i = 0; i < allValues.length; i++) {
-                chai.assert.equal(
+                chai.assert.deepEqual(
                     resultList[i+1],
-                    allValues[i].IonBinary
+                    load(allValues[i].IonBinary)
                 );
             }
         });
 
         it("should return a list of Ion values when Result object created with bufferResultReadable()", async () => {
-            const value1: ValueHolder = {IonBinary: "a"};
-            const value2: ValueHolder = {IonBinary: "b"};
-            const value3: ValueHolder = {IonBinary: "c"};
-            const value4: ValueHolder = {IonBinary: "d"};
+            const value1: ValueHolder = {IonBinary: enc.encode("a")};
+            const value2: ValueHolder = {IonBinary: enc.encode("b")};
+            const value3: ValueHolder = {IonBinary: enc.encode("c")};
+            const value4: ValueHolder = {IonBinary: enc.encode("d")};
             const values: dom.Value[] = [
                 dom.load(Result._handleBlob(value1.IonBinary)),
                 dom.load(Result._handleBlob(value2.IonBinary)),

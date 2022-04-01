@@ -11,9 +11,19 @@
  * and limitations under the License.
  */
 
-import { AWSError } from "aws-sdk";
+import { 
+    InvalidParameterException, 
+    ResourceNotFoundException, 
+    ResourcePreconditionNotMetException 
+} from "@aws-sdk/client-qldb";
+import { 
+    BadRequestException, 
+    InvalidSessionException, 
+    OccConflictException, 
+    QLDBSessionServiceException 
+} from "@aws-sdk/client-qldb-session";
 
-import { error } from "../LogUtil";
+import { error, log } from "../LogUtil";
 
 const transactionExpiredPattern = RegExp("Transaction .* has expired");
 
@@ -102,8 +112,8 @@ export class ExecuteError extends Error {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidParameterException. False otherwise.
  */
-export function isInvalidParameterException(e: AWSError): boolean {
-    return e.code === "InvalidParameterException";
+export function isInvalidParameterException(e: Error): boolean {
+    return e instanceof InvalidParameterException;
 }
 
 /**
@@ -111,8 +121,8 @@ export function isInvalidParameterException(e: AWSError): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidSessionException. False otherwise.
  */
-export function isInvalidSessionException(e: AWSError): boolean {
-    return e.code === "InvalidSessionException";
+export function isInvalidSessionException(e: Error): boolean {
+    return e instanceof InvalidSessionException;
 }
 
 /**
@@ -121,8 +131,8 @@ export function isInvalidSessionException(e: AWSError): boolean {
  * @param e The client error to check to see if it is an InvalidSessionException due to transaction expiry.
  * @returns Whether or not the exception is is an InvalidSessionException due to transaction expiry.
  */
-export function isTransactionExpiredException(e: AWSError): boolean {
-    return e.code === "InvalidSessionException" && transactionExpiredPattern.test(e.message);
+export function isTransactionExpiredException(e: Error): boolean {
+    return e instanceof InvalidSessionException  && transactionExpiredPattern.test(e.message);
 }
 
 /**
@@ -130,8 +140,8 @@ export function isTransactionExpiredException(e: AWSError): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an OccConflictException. False otherwise.
  */
-export function isOccConflictException(e: AWSError): boolean {
-    return e.code === "OccConflictException";
+export function isOccConflictException(e: Error): boolean {
+    return e instanceof OccConflictException;
 }
 
 /**
@@ -139,8 +149,8 @@ export function isOccConflictException(e: AWSError): boolean {
  * @param e The client error to check to see if it is a ResourceNotFoundException.
  * @returns Whether or not the exception is a ResourceNotFoundException.
  */
-export function isResourceNotFoundException(e: AWSError): boolean {
-    return e.code === "ResourceNotFoundException";
+export function isResourceNotFoundException(e: Error): boolean {
+    return e instanceof ResourceNotFoundException;
 }
 
 /**
@@ -148,8 +158,8 @@ export function isResourceNotFoundException(e: AWSError): boolean {
  * @param e The client error to check to see if it is a ResourcePreconditionNotMetException.
  * @returns Whether or not the exception is a ResourcePreconditionNotMetException.
  */
-export function isResourcePreconditionNotMetException(e: AWSError): boolean {
-    return e.code === "ResourcePreconditionNotMetException";
+export function isResourcePreconditionNotMetException(e: Error): boolean {
+    return e instanceof ResourcePreconditionNotMetException;
 }
 
 /**
@@ -157,8 +167,8 @@ export function isResourcePreconditionNotMetException(e: AWSError): boolean {
  * @param e The client error to check to see if it is a BadRequestException.
  * @returns Whether or not the exception is a BadRequestException.
  */
-export function isBadRequestException(e: AWSError): boolean {
-    return e.code === "BadRequestException";
+export function isBadRequestException(e: Error): boolean {
+    return e instanceof BadRequestException;
 }
 
 /**
@@ -169,11 +179,16 @@ export function isBadRequestException(e: AWSError): boolean {
  * 
  * @internal
  */
-export function isRetryableException(e: AWSError, onCommit: boolean): boolean {
-    const canSdkRetry: boolean = onCommit ? false : e.retryable;
-
-    return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
-        (isInvalidSessionException(e) && !isTransactionExpiredException(e));
+export function isRetryableException(e: Error, onCommit: boolean): boolean {
+    if (e instanceof QLDBSessionServiceException) {
+        // TODO: is checking whether QLDBSessionServiceException is throttling retryable the same as checking whether AWSError is retryable?
+        const canSdkRetry: boolean = onCommit ? false : e.$retryable && e.$retryable.throttling;
+    
+        return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
+            (isInvalidSessionException(e) && !isTransactionExpiredException(e));
+    }
+    log("Error is not an instance of QLDBSessionServiceException");
+    return false;
 }
 
 /**
@@ -181,9 +196,12 @@ export function isRetryableException(e: AWSError, onCommit: boolean): boolean {
  * @param e The client error caught.
  * @returns True if the exception has a retryable code.
  */
-function isRetryableStatusCode(e: AWSError): boolean {
-    return (e.statusCode === 500) ||
-           (e.statusCode === 503) ||
-           (e.code === "NoHttpResponseException") ||
-           (e.code === "SocketTimeoutException");
+function isRetryableStatusCode(e: Error): boolean {
+    if (e instanceof QLDBSessionServiceException) {
+        // TODO: is it safe getting rid of NoHttpResponseException and SocketTimeoutException checks?
+        return (e.$metadata.httpStatusCode === 500) ||
+               (e.$metadata.httpStatusCode === 503);
+    }
+    log("Error is not an instance of QLDBSessionServiceException");
+    return false;
 }

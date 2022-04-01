@@ -14,8 +14,6 @@
 // Test environment imports
 import "mocha";
 
-import { AWSError, QLDBSession } from "aws-sdk";
-import { ClientConfiguration, SendCommandResult } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { Agent } from "https";
@@ -29,6 +27,8 @@ import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { Result } from "../Result";
 import { TransactionExecutor } from "../TransactionExecutor";
 import { RetryConfig } from "../retry/RetryConfig";
+import { InvalidSessionException, OccConflictException, QLDBSession, QLDBSessionClientConfig, SendCommandResult } from "@aws-sdk/client-qldb-session";
+import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -50,11 +50,11 @@ let testQldbLowLevelClient: QLDBSession;
 
 const mockAgent: Agent = <Agent><any> sandbox.mock(Agent);
 mockAgent.maxSockets = testMaxSockets;
-const testLowLevelClientOptions: ClientConfiguration = {
-    region: "fakeRegion",
-    httpOptions: {
-        agent: mockAgent
-    }
+const testLowLevelClientOptions: QLDBSessionClientConfig = {
+    region: "fakeRegion"
+};
+const testLowLevelClientHttpOptions: NodeHttpHandlerOptions = {
+    httpAgent: mockAgent
 };
 
 const mockResult: Result = <Result><any> sandbox.mock(Result);
@@ -70,14 +70,10 @@ mockQldbSession.isAlive = () => true;
 describe("QldbDriver", () => {
     beforeEach(() => {
         testQldbLowLevelClient = new QLDBSession(testLowLevelClientOptions);
-        sendCommandStub = sandbox.stub(testQldbLowLevelClient, "sendCommand");
-        sendCommandStub.returns({
-            promise: () => {
-                return testSendCommandResult;
-            }
-        });
+        sendCommandStub = sandbox.stub(testQldbLowLevelClient, "send");
+        sendCommandStub.resolves(testSendCommandResult);
 
-        qldbDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions);
+        qldbDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions);
     });
 
     afterEach(() => {
@@ -86,11 +82,11 @@ describe("QldbDriver", () => {
     });
 
     describe("#constructor()", () => {
-        it("should have all attributes equal to mock values when constructor called", () => {
+        it("should have all attributes equal to mock values when constructor called", async () => {
             chai.assert.equal(qldbDriver["_ledgerName"], testLedgerName);
             chai.assert.equal(qldbDriver["_isClosed"], false);
             chai.assert.instanceOf(qldbDriver["_qldbClient"], QLDBSession);
-            chai.assert.equal(qldbDriver["_qldbClient"].config.maxRetries, testMaxRetries);
+            chai.assert.equal(await qldbDriver["_qldbClient"].config.maxAttempts(), testMaxRetries);
             chai.assert.equal(qldbDriver["_maxConcurrentTransactions"], mockAgent.maxSockets);
             chai.assert.equal(qldbDriver["_availablePermits"], mockAgent.maxSockets);
             chai.assert.deepEqual(qldbDriver["_sessionPool"], []);
@@ -102,21 +98,21 @@ describe("QldbDriver", () => {
 
         it("should throw a RangeError when retryLimit less than zero passed in", () => {
             const constructorFunction: () => void = () => {
-                new QldbDriver(testLedgerName, testLowLevelClientOptions, -1);
+                new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions, -1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
 
         it("should throw a RangeError when maxConcurrentTransactions greater than maxSockets", () => {
             const constructorFunction: () => void  = () => {
-                new QldbDriver(testLedgerName, testLowLevelClientOptions, testMaxSockets + 1);
+                new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions, testMaxSockets + 1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
 
         it("should throw a RangeError when maxConcurrentTransactions less than zero", () => {
             const constructorFunction: () => void = () => {
-                new QldbDriver(testLedgerName, testLowLevelClientOptions, -1);
+                new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions, -1);
             };
             chai.assert.throws(constructorFunction, RangeError);
         });
@@ -168,8 +164,7 @@ describe("QldbDriver", () => {
             const lambda = async (transactionExecutor: TransactionExecutor) => {
                 return true;
             };
-            const error = new Error("InvalidSession") as AWSError;
-            error.code = "InvalidSessionException";
+            const error = new InvalidSessionException({ $metadata: {}});
             error.message = "Transaction ABC has expired";
 
             mockSession1.executeLambda = async () => {
@@ -185,7 +180,7 @@ describe("QldbDriver", () => {
             const executeLambdaSpy1 = sandbox.spy(mockSession1, "executeLambda");
             const executeLambdaSpy2 = sandbox.spy(mockSession2, "executeLambda");
             const result = await chai.expect(qldbDriver.executeLambda(lambda, defaultRetryConfig)).to.be.rejected;
-            chai.assert.equal(result.code, error.code);
+            chai.assert.equal(result.name, error.name);
 
             sinon.assert.calledOnce(executeLambdaSpy1);
             sinon.assert.calledWith(executeLambdaSpy1, lambda);
@@ -197,8 +192,7 @@ describe("QldbDriver", () => {
             const mockSession: QldbSession = <QldbSession><any> sandbox.mock(QldbSession);
             const errorCode: string = "OccConflictException";
             mockSession.executeLambda = async () => {
-                const error = new Error("OccConflictException") as AWSError;
-                error.code = errorCode;
+                const error = new OccConflictException({ $metadata: {}});
                 throw new ExecuteError(error, true, false);
             };
             const executeLambdaSpy = sandbox.spy(mockSession, "executeLambda");
@@ -210,7 +204,7 @@ describe("QldbDriver", () => {
             const retryConfig: RetryConfig = new RetryConfig(2)
             qldbDriver["_sessionPool"] = [mockSession];
             const result = await chai.expect(qldbDriver.executeLambda(lambda, retryConfig)).to.be.rejected;
-            chai.assert.equal(result.code, errorCode);
+            chai.assert.equal(result.name, errorCode);
             sinon.assert.callCount(executeLambdaSpy, retryConfig.getRetryLimit() + 1);
         });
 
@@ -236,7 +230,7 @@ describe("QldbDriver", () => {
         });
 
         it("should not increment semaphore permit count if called when pool empty", async () => {
-            const onePermitDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, 1);
+            const onePermitDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions, 1);
             onePermitDriver["_sessionPool"] = [mockQldbSession];
             const executeStub = sandbox.stub(mockQldbSession, "executeLambda");
             executeStub.returns(new Promise(resolve => setTimeout(resolve, 10)));
