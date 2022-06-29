@@ -22,7 +22,7 @@
     "aws-sdk": "^2.841.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "cross-env": "^6.0.3",
+    "cross-env": "^7.0.3",
     "eslint": "^6.5.1",
     "eslint-plugin-jsdoc": "^15.12.0",
     "grunt": "^1.0.4",
