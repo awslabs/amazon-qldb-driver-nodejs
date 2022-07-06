@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@types/node": "^12.0.2",
+    "@types/node": "^18.0.3",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
@@ -15,7 +15,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.10",
     "@types/chai-as-promised": "^7.1.2",
-    "@types/mocha": "^5.2.7",
+    "@types/mocha": "^9.1.1",
     "@types/sinon": "^7.0.13",
     "@typescript-eslint/eslint-plugin": "^2.5.0",
     "@typescript-eslint/parser": "^2.5.0",
@@ -30,7 +30,7 @@
     "jsbi": "^3.1.1",
     "mocha": "^6.2.0",
     "mocha-param": "^2.0.1",
-    "nyc": "^14.1.1",
+    "nyc": "^15.1.0",
     "sinon": "^7.3.2",
     "ts-node": "^8.3.0",
     "typedoc": "^0.15.0",
