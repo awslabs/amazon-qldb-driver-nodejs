@@ -21,6 +21,7 @@ import {
     isRetryableException,
     isTransactionExpiredException
 } from "./errors/Errors";
+import { AWSError } from "aws-sdk";
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
@@ -66,16 +67,16 @@ export class QldbSession {
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetryable: boolean = isRetryableException(e, onCommit);
-            const isISE: boolean = isInvalidSessionException(e);
-            if (isISE && !isTransactionExpiredException(e)) {
+            const isRetryable: boolean = isRetryableException(e as AWSError, onCommit);
+            const isISE: boolean = isInvalidSessionException(e as AWSError);
+            if (isISE && !isTransactionExpiredException(e as AWSError)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
                 this._isAlive = false;
-            } else if (!isOccConflictException(e)) {
+            } else if (!isOccConflictException(e as AWSError)) {
                 // OCC does not need session state reset as the transaction is implicitly closed
                 await this._cleanSessionState();
             }
-            throw new ExecuteError(e, isRetryable, isISE, transactionId);
+            throw new ExecuteError(e as AWSError, isRetryable, isISE, transactionId);
         }
     }
 

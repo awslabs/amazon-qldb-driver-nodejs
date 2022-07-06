@@ -202,7 +202,7 @@ export class QldbDriver {
                     thisDriver._availablePermits++;
             
                     // An error when failing to start a new session is always retryable
-                    throw new ExecuteError(e, true, true);
+                    throw new ExecuteError(e as Error, true, true);
                 }
             } else {
                 throw new SessionPoolEmptyError()

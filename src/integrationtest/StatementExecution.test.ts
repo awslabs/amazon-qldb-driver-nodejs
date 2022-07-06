@@ -307,11 +307,10 @@ describe("StatementExecution", function() {
         const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), 3, retryConfig);
         async function updateField(driver: QldbDriver): Promise<void> {
             await driver.executeLambda(async (txn: TransactionExecutor) => {
-                let currentValue: number;
                 
                 // Query table
                 const result: Result = await txn.execute(`SELECT VALUE ${constants.COLUMN_NAME} from ${constants.TABLE_NAME}`);
-                currentValue = result.getResultList()[0].numberValue();
+                const currentValue = result.getResultList()[0].numberValue();
 
                 // Update document
                 await txn.execute(`UPDATE ${constants.TABLE_NAME} SET ${constants.COLUMN_NAME} = ?`, currentValue + 5);

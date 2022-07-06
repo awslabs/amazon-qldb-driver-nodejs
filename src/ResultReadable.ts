@@ -121,7 +121,7 @@ export class ResultReadable extends Readable {
 
                     this._retrieveIndex = 0;
                 } catch (e) {
-                    this.destroy(e);
+                    this.destroy(e as Error);
                     canPush = false;
                     return;
                 }

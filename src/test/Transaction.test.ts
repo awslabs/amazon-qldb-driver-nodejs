@@ -244,8 +244,8 @@ describe("Transaction", () => {
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatement);
 
             const parameters: any[] = [5, "a"];
-            let ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
-                let valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
+            const ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
+                const valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
                 testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(valueIonBinary));
                 return valueIonBinary;
             });
@@ -270,8 +270,8 @@ describe("Transaction", () => {
             let testStatementHash: QldbHash = QldbHash.toQldbHash(testStatementWithQuotes);
 
             const parameters: any[] = [5, "a"];
-            let ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
-                let valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
+            const ionBinaryValues: Uint8Array[] = parameters.map((value: any): Uint8Array => {
+                const valueIonBinary:Uint8Array = ionJs.dumpBinary(value);
                 testStatementHash = testStatementHash.dot(QldbHash.toQldbHash(valueIonBinary));
                 return valueIonBinary;
             });
@@ -338,7 +338,7 @@ describe("Transaction", () => {
             const executeStatementSpy = sandbox.spy(transaction["_communicator"], "executeStatement");
             const result: ExecuteStatementResult = await transaction["_sendExecute"](testStatement, parameters);
 
-            let expectedValueHolders: ValueHolder[] = [];
+            const expectedValueHolders: ValueHolder[] = [];
             parameters.forEach((value: any) => {
                 const valueHolder: ValueHolder = {
                     IonBinary:  ionJs.dumpBinary(value)

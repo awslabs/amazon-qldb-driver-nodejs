@@ -137,7 +137,7 @@ export class Transaction {
                 try {
                     ionBinary = dumpBinary(param);
                 } catch(e) {
-                    e.message = `Failed to convert parameter ${String(param)} to Ion Binary: ${e.message}`;
+                    (e as Error).message = `Failed to convert parameter ${String(param)} to Ion Binary: ${(e as Error).message}`;
                     throw e;
                 }
                 statementHash = statementHash.dot(QldbHash.toQldbHash(ionBinary));
