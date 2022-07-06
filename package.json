@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "@aws-sdk/client-qldb": "^3.58.0",
     "@aws-sdk/client-qldb-session": "^3.58.0",
+    "@types/node": "^18.0.1",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
@@ -15,6 +15,7 @@
     "node": ">=10.0.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-qldb": "^3.58.0",
     "@types/chai": "^4.2.10",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^5.2.7",
