@@ -10,15 +10,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.2.10",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^9.1.1",
     "@types/sinon": "^10.0.12",
-    "@typescript-eslint/eslint-plugin": "^2.5.0",
-    "@typescript-eslint/parser": "^2.5.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/parser": "^5.30.5",
     "aws-sdk": "^2.841.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
