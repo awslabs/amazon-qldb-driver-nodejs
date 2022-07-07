@@ -176,7 +176,7 @@ export class Result {
      */
     private static async _readResultReadable(resultReadable: ResultReadable): Promise<dom.Value[]> {
         return new Promise(res => {
-            let ionValues: dom.Value[] = [];
+            const ionValues: dom.Value[] = [];
             resultReadable.on("data", function(value) {
                 ionValues.push(value);
             }).on("end", function() {
