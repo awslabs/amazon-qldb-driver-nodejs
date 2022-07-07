@@ -244,7 +244,7 @@ describe("QldbSession", () => {
             const communicatorTransactionSpy = sandbox.spy(mockCommunicator, "startTransaction");
             const communicatorAbortTransactionSpy = sandbox.spy(mockCommunicator, "abortTransaction");
 
-            let result = await chai.expect(qldbSession.executeLambda(async (txn) => {
+            const result = await chai.expect(qldbSession.executeLambda(async (txn) => {
                 throw error;
             })).to.be.rejected;
             sinon.assert.calledOnce(communicatorTransactionSpy);

@@ -21,6 +21,7 @@ import {
     isRetryableException,
     isTransactionExpiredException
 } from "./errors/Errors";
+import { AWSError } from "aws-sdk";
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";

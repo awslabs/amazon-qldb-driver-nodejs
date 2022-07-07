@@ -12,7 +12,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-qldb": "^3.58.0",
@@ -20,12 +20,12 @@
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^9.1.1",
     "@types/sinon": "^10.0.12",
-    "@typescript-eslint/eslint-plugin": "^2.5.0",
-    "@typescript-eslint/parser": "^2.5.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.5",
+    "@typescript-eslint/parser": "^5.30.5",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
-    "eslint": "^7.32.0",
+    "eslint": "^8.19.0",
     "eslint-plugin-jsdoc": "^39.3.3",
     "grunt": "^1.0.4",
     "ion-js": "^4.0.0",
