@@ -88,7 +88,6 @@ describe("QldbDriver", () => {
             chai.assert.instanceOf(qldbDriver["_qldbClient"], QLDBSession);
             chai.assert.equal(await qldbDriver["_qldbClient"].config.maxAttempts(), testMaxRetries);
             chai.assert.equal(qldbDriver["_maxConcurrentTransactions"], mockAgent.maxSockets);
-            chai.assert.equal(qldbDriver["_availablePermits"], mockAgent.maxSockets);
             chai.assert.deepEqual(qldbDriver["_sessionPool"], []);
             chai.assert.instanceOf(qldbDriver["_semaphore"], Semaphore);
             chai.assert.equal(qldbDriver["_semaphore"]["permits"], mockAgent.maxSockets);

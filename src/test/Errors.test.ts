@@ -35,6 +35,7 @@ import {
 import * as LogUtil from "../LogUtil";
 import { BadRequestException, InvalidSessionException, OccConflictException, QLDBSessionServiceException } from "@aws-sdk/client-qldb-session";
 import { InvalidParameterException, ResourceNotFoundException, ResourcePreconditionNotMetException } from "@aws-sdk/client-qldb";
+import { ServiceException } from "@aws-sdk/smithy-client";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -150,28 +151,24 @@ describe("Errors", () => {
 
     describe("#isRetryableException()", () => {
         it("should return true with statusCode 500", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 500 }, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 500 }, name: "", $fault: "server" });
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should return true with statusCode 503", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 503 }, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 503 }, name: "", $fault: "server" });
+            chai.assert.isTrue(isRetryableException(mockError, false));
+        });
+        
+        it("should return true when error is NoHttpResponseException", () => {
+            const mockError = new ServiceException({ $metadata: { }, name: "NoHttpResponseException", $fault: "client" })
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
-        // TODO: is it safe to remove tests with NoHttpResponseException and SocketTimeoutException?
-        
-        // it("should return true when error is NoHttpResponseException", () => {
-        //     mockError.code = "NoHttpResponseException";
-        //     mockError.statusCode = 200;
-        //     chai.assert.isTrue(isRetryableException(mockError, false));
-        // });
-
-        // it("should return true when error is SocketTimeoutException", () => {
-        //     mockError.code = "SocketTimeoutException";
-        //     mockError.statusCode = 200;
-        //     chai.assert.isTrue(isRetryableException(mockError, false));
-        // });
+        it("should return true when error is SocketTimeoutException", () => {
+            const mockError = new ServiceException({ $metadata: { }, name: "SocketTimeoutException", $fault: "client" })
+            chai.assert.isTrue(isRetryableException(mockError, false));
+        });
 
         it("should return false when not a retryable exception", () => {
             const mockError = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server" });

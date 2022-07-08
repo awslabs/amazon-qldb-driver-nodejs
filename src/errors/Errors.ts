@@ -23,7 +23,9 @@ import {
     QLDBSessionServiceException 
 } from "@aws-sdk/client-qldb-session";
 
-import { error, log } from "../LogUtil";
+import { ServiceException } from "@aws-sdk/smithy-client"
+
+import { error } from "../LogUtil";
 
 const transactionExpiredPattern = RegExp("Transaction .* has expired");
 
@@ -112,7 +114,7 @@ export class ExecuteError extends Error {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidParameterException. False otherwise.
  */
-export function isInvalidParameterException(e: Error): boolean {
+export function isInvalidParameterException(e: ServiceException): boolean {
     return e instanceof InvalidParameterException;
 }
 
@@ -121,7 +123,7 @@ export function isInvalidParameterException(e: Error): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an InvalidSessionException. False otherwise.
  */
-export function isInvalidSessionException(e: Error): boolean {
+export function isInvalidSessionException(e: ServiceException): boolean {
     return e instanceof InvalidSessionException;
 }
 
@@ -131,7 +133,7 @@ export function isInvalidSessionException(e: Error): boolean {
  * @param e The client error to check to see if it is an InvalidSessionException due to transaction expiry.
  * @returns Whether or not the exception is is an InvalidSessionException due to transaction expiry.
  */
-export function isTransactionExpiredException(e: Error): boolean {
+export function isTransactionExpiredException(e: ServiceException): boolean {
     return e instanceof InvalidSessionException  && transactionExpiredPattern.test(e.message);
 }
 
@@ -140,7 +142,7 @@ export function isTransactionExpiredException(e: Error): boolean {
  * @param e The client error caught.
  * @returns True if the exception is an OccConflictException. False otherwise.
  */
-export function isOccConflictException(e: Error): boolean {
+export function isOccConflictException(e: ServiceException): boolean {
     return e instanceof OccConflictException;
 }
 
@@ -149,7 +151,7 @@ export function isOccConflictException(e: Error): boolean {
  * @param e The client error to check to see if it is a ResourceNotFoundException.
  * @returns Whether or not the exception is a ResourceNotFoundException.
  */
-export function isResourceNotFoundException(e: Error): boolean {
+export function isResourceNotFoundException(e: ServiceException): boolean {
     return e instanceof ResourceNotFoundException;
 }
 
@@ -158,7 +160,7 @@ export function isResourceNotFoundException(e: Error): boolean {
  * @param e The client error to check to see if it is a ResourcePreconditionNotMetException.
  * @returns Whether or not the exception is a ResourcePreconditionNotMetException.
  */
-export function isResourcePreconditionNotMetException(e: Error): boolean {
+export function isResourcePreconditionNotMetException(e: ServiceException): boolean {
     return e instanceof ResourcePreconditionNotMetException;
 }
 
@@ -167,7 +169,7 @@ export function isResourcePreconditionNotMetException(e: Error): boolean {
  * @param e The client error to check to see if it is a BadRequestException.
  * @returns Whether or not the exception is a BadRequestException.
  */
-export function isBadRequestException(e: Error): boolean {
+export function isBadRequestException(e: ServiceException): boolean {
     return e instanceof BadRequestException;
 }
 
@@ -179,15 +181,13 @@ export function isBadRequestException(e: Error): boolean {
  * 
  * @internal
  */
-export function isRetryableException(e: Error, onCommit: boolean): boolean {
-    if (e instanceof QLDBSessionServiceException) {
-        // TODO: is checking whether QLDBSessionServiceException is throttling retryable the same as checking whether AWSError is retryable?
+export function isRetryableException(e: ServiceException, onCommit: boolean): boolean {
+    if (e instanceof ServiceException) {
         const canSdkRetry: boolean = onCommit ? false : e.$retryable && e.$retryable.throttling;
     
         return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
             (isInvalidSessionException(e) && !isTransactionExpiredException(e));
     }
-    log("Error is not an instance of QLDBSessionServiceException");
     return false;
 }
 
@@ -196,12 +196,12 @@ export function isRetryableException(e: Error, onCommit: boolean): boolean {
  * @param e The client error caught.
  * @returns True if the exception has a retryable code.
  */
-function isRetryableStatusCode(e: Error): boolean {
-    if (e instanceof QLDBSessionServiceException) {
-        // TODO: is it safe getting rid of NoHttpResponseException and SocketTimeoutException checks?
+function isRetryableStatusCode(e: ServiceException): boolean {
+    if (e instanceof ServiceException) {
         return (e.$metadata.httpStatusCode === 500) ||
-               (e.$metadata.httpStatusCode === 503);
+               (e.$metadata.httpStatusCode === 503) || 
+               (e.name === "NoHttpResponseException") ||
+               (e.name === "SocketTimeoutException");
     }
-    log("Error is not an instance of QLDBSessionServiceException");
     return false;
 }

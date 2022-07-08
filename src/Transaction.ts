@@ -141,12 +141,8 @@ export class Transaction {
                 try {
                     ionBinary = dumpBinary(param);
                 } catch(e) {
-                    if (e instanceof QLDBSessionServiceException) {
-                        e.message = `Failed to convert parameter ${String(param)} to Ion Binary: ${e.message}`;
-                        throw e;
-                    }
-                    // TODO: should this line even exist?
-                    throw new Error("Error not instance of QLDBSessionServiceException");
+                    (e as Error).message = `Failed to convert parameter ${String(param)} to Ion Binary: ${(e as Error).message}`;
+                    throw e;
                 }
                 statementHash = statementHash.dot(QldbHash.toQldbHash(ionBinary));
                 const valueHolder: ValueHolder = {

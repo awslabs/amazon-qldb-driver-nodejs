@@ -24,6 +24,7 @@ import {
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 /**
  * @internal
@@ -66,12 +67,12 @@ export class QldbSession {
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetryable: boolean = isRetryableException(e as Error, onCommit);
-            const isISE: boolean = isInvalidSessionException(e as Error);
-            if (isISE && !isTransactionExpiredException(e as Error)) {
+            const isRetryable: boolean = isRetryableException(e as ServiceException, onCommit);
+            const isISE: boolean = isInvalidSessionException(e as ServiceException);
+            if (isISE && !isTransactionExpiredException(e as ServiceException)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
                 this._isAlive = false;
-            } else if (!isOccConflictException(e as Error)) {
+            } else if (!isOccConflictException(e as ServiceException)) {
                 // OCC does not need session state reset as the transaction is implicitly closed
                 await this._cleanSessionState();
             }
