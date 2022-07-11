@@ -5,9 +5,9 @@
 [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/awslabs/amazon-qldb-driver-nodejs/blob/master/LICENSE)
 [![AWS Provider](https://img.shields.io/badge/provider-AWS-orange?logo=amazon-aws&color=ff9900)](https://aws.amazon.com/qldb/)
 
-This is the Node.js driver for Amazon Quantum Ledger Database (QLDB), which allows Node.js developers to write software that makes use of Amazon QLDB.
+This is the Node.js driver for [Amazon Quantum Ledger Database (QLDB)](https://aws.amazon.com/qldb/), which allows Node.js developers to write software that makes use of Amazon QLDB.
 
-For getting started with the driver, see [Nodejs and Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html).
+For getting started with the driver, see [Node.js and Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html).
 
 ## Requirements
 
@@ -15,8 +15,8 @@ For getting started with the driver, see [Nodejs and Amazon QLDB](https://docs.a
 
 See [Accessing Amazon QLDB](https://docs.aws.amazon.com/qldb/latest/developerguide/accessing.html) for information on connecting to AWS.
 
-The JavaScript AWS SDK needs to have AWS_SDK_LOAD_CONFIG environment variable set to a truthy value in order to read
-from the ~/.aws/config file.
+The JavaScript AWS SDK needs to have `AWS_SDK_LOAD_CONFIG` environment variable set to a truthy value in order to read
+from the `~/.aws/config` file.
 
 See [Setting Region](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-region.html) page for more information.
 
@@ -63,19 +63,15 @@ qldbDriver.getTableNames().then(function(tableNames: string[]) {
 
 ### See Also
 
-1. [Amazon QLDB Nodejs Driver Tutorial](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html): In this tutorial, you use the QLDB Driver for Node.js to create an Amazon QLDB ledger and populate it with tables and sample data.
-2. [QLDB Nodejs Driver Cookbook](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-cookbook-nodejs.html) The cookbook provides code samples for some simple QLDB Nodejs driver use cases. 
-3. [Amazon QLDB Nodejs Driver Tutorial](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.tutorial.html): In this tutorial, you use the QLDB Driver for Nodejs to create an Amazon QLDB ledger and populate it with tables and sample data.
-4. [Amazon QLDB Nodejs Driver Samples](https://github.com/aws-samples/amazon-qldb-dmv-sample-nodejs): A DMV based example application which demonstrates how to use QLDB with the QLDB Driver for Node.js.
-5. QLDB Nodejs driver accepts and returns [Amazon ION](http://amzn.github.io/ion-docs/) Documents. Amazon Ion is a richly-typed, self-describing, hierarchical data serialization format offering interchangeable binary and text representations. For more information read the [ION docs](http://amzn.github.io/ion-docs/docs.html).
-6. [Amazon ION Cookbook](http://amzn.github.io/ion-docs/guides/cookbook.html): This cookbook provides code samples for some simple Amazon Ion use cases.
-7. Amazon QLDB supports the [PartiQL](https://partiql.org/) query language. PartiQL provides SQL-compatible query access across multiple data stores containing structured data, semistructured data, and nested data. For more information read the [PartiQL docs](https://partiql.org/docs.html).
-8. Refer the section [Common Errors while using the Amazon QLDB Drivers](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-errors.html) which describes runtime errors that can be thrown by the Amazon QLDB Driver when calling the qldb-session APIs.
-9. **Driver Recommendations** &mdash; Check them out in the [Best Practices](https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html) 
-in the QLDB documentation.
-10. **Exception handling when using QLDB Drivers** &mdash; Refer to the section [Common Errors while using the Amazon 
-QLDB Drivers](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-errors.html) 
-which describes runtime exceptions that can be thrown by the Amazon QLDB Driver when calling the qldb-session APIs.
+1. [Getting Started with Amazon QLDB Node.js Driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html): A guide that gets you started with executing transactions with the QLDB Node.js driver.
+1. [QLDB Node.js Driver Cookbook](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-cookbook-nodejs.html) The cookbook provides code samples for some simple QLDB Node.js driver use cases. 
+1. [Amazon QLDB Node.js Driver Tutorial](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.tutorial.html): In this tutorial, you use the QLDB Driver for Node.js to create an Amazon QLDB ledger and populate it with tables and sample data.
+1. [Amazon QLDB Node.js Driver Samples](https://github.com/aws-samples/amazon-qldb-dmv-sample-nodejs): A DMV based example application which demonstrates how to use QLDB with the QLDB Driver for Node.js.
+1. QLDB Node.js driver accepts and returns [Amazon ION](http://amzn.github.io/ion-docs/) Documents. Amazon Ion is a richly-typed, self-describing, hierarchical data serialization format offering interchangeable binary and text representations. For more information read the [ION docs](http://amzn.github.io/ion-docs/docs.html).
+1. Amazon QLDB supports the [PartiQL](https://partiql.org/) query language. PartiQL provides SQL-compatible query access across multiple data stores containing structured data, semistructured data, and nested data. For more information read the [PartiQL docs](https://partiql.org/docs.html).
+1. Refer the section [Common Errors while using the Amazon QLDB Drivers](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-errors.html) which describes runtime errors that can be thrown by the Amazon QLDB Driver when calling the qldb-session APIs.
+
+
 
 
 
