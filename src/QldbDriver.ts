@@ -227,7 +227,6 @@ export class QldbDriver {
         
         retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
         let replaceDeadSession: boolean = false;
-        let retryAttempt = 0;
         for (let retryAttempt: number = 1; true; retryAttempt++) {
             let session: QldbSession = null;
             try {
