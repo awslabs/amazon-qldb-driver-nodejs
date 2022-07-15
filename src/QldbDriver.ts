@@ -15,7 +15,6 @@ import {
     QLDBSession,  
     QLDBSessionClient,   
     QLDBSessionClientConfig,  
-    QLDBSessionServiceException 
 } from "@aws-sdk/client-qldb-session";
 import { globalAgent } from "http";
 import { dom } from "ion-js";

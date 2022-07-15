@@ -23,8 +23,9 @@ import { RetryConfig } from "../retry/RetryConfig";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
-import { QLDBSessionClientConfig, QLDBSessionServiceException } from "@aws-sdk/client-qldb-session";
+import { QLDBSessionClientConfig } from "@aws-sdk/client-qldb-session";
 import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 chai.use(chaiAsPromised);
 
@@ -146,7 +147,7 @@ describe("SessionManagement", function() {
                 await driver.executeLambda(async (txn) => {
                     await txn.execute(`SELECT * FROM ${constants.TABLE_NAME}`);
                     if ((Date.now() - startTime) < 10000) {
-                        const err = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 500 }, name: "mock retryable exception", $fault: "server" });
+                        const err = new ServiceException({ $metadata: { httpStatusCode: 500 }, name: "mock retryable exception", $fault: "server" });
                         throw err;
                     }
                 }, noDelayConfig);

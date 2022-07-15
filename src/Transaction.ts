@@ -14,7 +14,6 @@
 import { 
     CommitTransactionResult, 
     ExecuteStatementResult, 
-    QLDBSessionServiceException, 
     ValueHolder 
 } from "@aws-sdk/client-qldb-session";
 import { dumpBinary, toBase64 } from "ion-js";

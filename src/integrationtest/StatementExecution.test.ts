@@ -25,6 +25,7 @@ import { TimingInformation } from "../stats/TimingInformation";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 const itParam = require("mocha-param");
 chai.use(chaiAsPromised);
@@ -320,7 +321,7 @@ describe("StatementExecution", function() {
         try {   
             await Promise.all([updateField(noRetryDriver), updateField(noRetryDriver), updateField(noRetryDriver)]);
         } catch (e) {
-            if (isOccConflictException(e)) {
+            if (isOccConflictException(e as ServiceException)) {
                 occFlag = true;
             }
         }

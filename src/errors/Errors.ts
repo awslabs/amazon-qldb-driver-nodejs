@@ -20,7 +20,6 @@ import {
     BadRequestException, 
     InvalidSessionException, 
     OccConflictException, 
-    QLDBSessionServiceException 
 } from "@aws-sdk/client-qldb-session";
 
 import { ServiceException } from "@aws-sdk/smithy-client"

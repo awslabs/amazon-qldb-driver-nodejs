@@ -33,7 +33,7 @@ import {
     isBadRequestException
 } from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
-import { BadRequestException, InvalidSessionException, OccConflictException, QLDBSessionServiceException } from "@aws-sdk/client-qldb-session";
+import { BadRequestException, InvalidSessionException, OccConflictException } from "@aws-sdk/client-qldb-session";
 import { InvalidParameterException, ResourceNotFoundException, ResourcePreconditionNotMetException } from "@aws-sdk/client-qldb";
 import { ServiceException } from "@aws-sdk/smithy-client";
 
@@ -96,7 +96,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not an InvalidParameterException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isInvalidParameterException(mockError));
         });
     });
@@ -108,7 +108,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not an InvalidSessionException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isInvalidSessionException(mockError));
         });
     });
@@ -120,7 +120,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not an OccConflictException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isOccConflictException(mockError));
         });
     });
@@ -132,7 +132,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not a ResourceNotFoundException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isResourceNotFoundException(mockError));
         });
     });
@@ -144,7 +144,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not a ResourcePreconditionNotMetException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isResourcePreconditionNotMetException(mockError));
         });
     });
@@ -171,12 +171,12 @@ describe("Errors", () => {
         });
 
         it("should return false when not a retryable exception", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server" });
             chai.assert.isFalse(isRetryableException(mockError, false));
         });
 
         it("should appropriately handle retryable errors from the SDK", () => {
-            const awsError = new QLDBSessionServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server", });
+            const awsError = new ServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server", });
 
             // Empty retryable causes false
             awsError.$retryable = undefined;
@@ -209,7 +209,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not an InvalidSessionException ", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isTransactionExpiredException(mockError));
         });
     });
@@ -221,7 +221,7 @@ describe("Errors", () => {
         });
 
         it("should return false when error is not a BadRequestException", () => {
-            const mockError = new QLDBSessionServiceException({ $metadata: {}, name: "", $fault: "server" });
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isBadRequestException(mockError));
         });
     });
