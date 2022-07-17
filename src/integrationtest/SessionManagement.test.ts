@@ -152,7 +152,7 @@ describe("SessionManagement", function() {
                     }
                 }, noDelayConfig);
             } catch (e) {
-                chai.assert.fail(e.message);
+                chai.assert.fail(e.name);
             }
         }
     });

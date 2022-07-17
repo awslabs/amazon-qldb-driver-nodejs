@@ -19,7 +19,8 @@ import {
 import { 
     BadRequestException, 
     InvalidSessionException, 
-    OccConflictException, 
+    OccConflictException,
+    QLDBSessionServiceException, 
 } from "@aws-sdk/client-qldb-session";
 
 import { ServiceException } from "@aws-sdk/smithy-client"
@@ -180,8 +181,8 @@ export function isBadRequestException(e: ServiceException): boolean {
  * 
  * @internal
  */
-export function isRetryableException(e: ServiceException, onCommit: boolean): boolean {
-    if (e instanceof ServiceException) {
+export function isRetryableException(e: Error, onCommit: boolean): boolean {
+    if (e instanceof ServiceException || e instanceof QLDBSessionServiceException) {
         const canSdkRetry: boolean = onCommit ? false : e.$retryable && e.$retryable.throttling;
     
         return isRetryableStatusCode(e) || isOccConflictException(e) || canSdkRetry ||
@@ -195,8 +196,8 @@ export function isRetryableException(e: ServiceException, onCommit: boolean): bo
  * @param e The client error caught.
  * @returns True if the exception has a retryable code.
  */
-function isRetryableStatusCode(e: ServiceException): boolean {
-    if (e instanceof ServiceException) {
+function isRetryableStatusCode(e: Error): boolean {
+    if (e instanceof ServiceException || e instanceof QLDBSessionServiceException) {
         return (e.$metadata.httpStatusCode === 500) ||
                (e.$metadata.httpStatusCode === 503) || 
                (e.name === "NoHttpResponseException") ||

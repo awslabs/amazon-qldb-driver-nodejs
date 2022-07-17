@@ -184,7 +184,7 @@ export class QldbDriver {
         const getSession = async function(thisDriver: QldbDriver): Promise<QldbSession> {
             debug(
                 `Getting session. Current free session count: ${thisDriver._sessionPool.length}. ` +
-                `Currently available permit count: ${thisDriver._semaphore.getPermits}.`
+                `Currently available permit count: ${thisDriver._semaphore.getPermits()}.`
             );
             if (thisDriver._semaphore.tryAcquire()) {
                 let session = thisDriver._sessionPool.pop();                
