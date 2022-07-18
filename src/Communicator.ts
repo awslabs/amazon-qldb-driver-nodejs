@@ -13,6 +13,7 @@
 
 import { 
     AbortTransactionResult, 
+    CommitTransactionRequest,
     CommitTransactionResult, 
     EndSessionResult, 
     ExecuteStatementResult, 
@@ -83,13 +84,10 @@ export class Communicator {
      * @param commitDigest The digest hash of the transaction to commit.
      * @returns Promise which fulfills with the commit transaction response returned from QLDB.
      */
-    async commit(txnId: string, commitDigest: Uint8Array | undefined): Promise<CommitTransactionResult> {
+    async commit(commitTransaction: CommitTransactionRequest): Promise<CommitTransactionResult> {
         const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
-            CommitTransaction: {
-                TransactionId: txnId,
-                CommitDigest: commitDigest
-            }
+            CommitTransaction: commitTransaction
         });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.CommitTransaction;

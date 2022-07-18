@@ -135,7 +135,10 @@ describe("Communicator", () => {
 
     describe("#commit()", () => {
         it("should call AWS SDK's sendCommand with commit request when called", async () => {
-            const commitResult: CommitTransactionResult = await communicator.commit(testTransactionId, testHashToQldb);
+            const commitResult: CommitTransactionResult = await communicator.commit({ 
+                TransactionId: testTransactionId, 
+                CommitDigest: testHashToQldb
+            });
             const testRequest: SendCommandRequest = {
                 SessionToken: testSessionToken,
                 CommitTransaction: {
@@ -157,7 +160,12 @@ describe("Communicator", () => {
                     CommitDigest: testHashToQldb
                 }
             };
-            await chai.expect(communicator.commit(testTransactionId, testHashToQldb)).to.be.rejected;
+            await chai.expect(
+                communicator.commit({
+                    TransactionId: testTransactionId, 
+                    CommitDigest: testHashToQldb
+                })
+            ).to.be.rejected;
             sinon.assert.calledTwice(sendCommandStub);
             chai.assert.deepEqual(sendCommandStub.secondCall.args[0].input, testRequest);
         });
