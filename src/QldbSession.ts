@@ -11,7 +11,7 @@
  * and limitations under the License.
  */
 
-import { StartTransactionResult } from "aws-sdk/clients/qldbsession";
+import { StartTransactionResult } from "@aws-sdk/client-qldb-session";
 
 import { Communicator } from "./Communicator";
 import {
@@ -21,10 +21,10 @@ import {
     isRetryableException,
     isTransactionExpiredException
 } from "./errors/Errors";
-import { AWSError } from "aws-sdk";
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 /**
  * @internal
@@ -67,16 +67,16 @@ export class QldbSession {
             await transaction.commit();
             return returnedValue;
         } catch (e) {
-            const isRetryable: boolean = isRetryableException(e as AWSError, onCommit);
-            const isISE: boolean = isInvalidSessionException(e as AWSError);
-            if (isISE && !isTransactionExpiredException(e as AWSError)) {
+            const isRetryable: boolean = isRetryableException(e as ServiceException, onCommit);
+            const isISE: boolean = isInvalidSessionException(e as ServiceException);
+            if (isISE && !isTransactionExpiredException(e as ServiceException)) {
                 // Underlying session is dead on InvalidSessionException except for transaction expiry
                 this._isAlive = false;
-            } else if (!isOccConflictException(e as AWSError)) {
+            } else if (!isOccConflictException(e as ServiceException)) {
                 // OCC does not need session state reset as the transaction is implicitly closed
                 await this._cleanSessionState();
             }
-            throw new ExecuteError(e as AWSError, isRetryable, isISE, transactionId);
+            throw new ExecuteError(e as Error, isRetryable, isISE, transactionId);
         }
     }
 

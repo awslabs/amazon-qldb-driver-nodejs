@@ -6,4 +6,3 @@ dev/stress_test/*.txt
 docs/*
 coverage/*
 dist/*
-package-lock.json

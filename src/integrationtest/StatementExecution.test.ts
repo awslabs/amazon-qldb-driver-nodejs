@@ -11,7 +11,6 @@
  * and limitations under the License.
  */
 
-import { AWSError } from "aws-sdk";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom, IonType } from "ion-js";
@@ -26,6 +25,7 @@ import { TimingInformation } from "../stats/TimingInformation";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 const itParam = require("mocha-param");
 chai.use(chaiAsPromised);
@@ -99,10 +99,10 @@ describe("StatementExecution", function() {
 
     it("Throws exception when creating table using the same name as an already-existing one", async () => {
         const statement: string = `CREATE TABLE ${constants.TABLE_NAME}`;
-        const error: AWSError = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
+        const error = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
             await txn.execute(statement);
         })).to.be.rejected;
-        chai.assert.equal(error.code, "BadRequestException");
+        chai.assert.equal(error.name, "BadRequestException");
     });
 
     it("Can create an index", async () => {
@@ -304,7 +304,7 @@ describe("StatementExecution", function() {
         
         // Create a driver that does not retry OCC errors
         const retryConfig: RetryConfig = new RetryConfig(0);
-        const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), 3, retryConfig);
+        const noRetryDriver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, testUtils.createClientConfiguration(), {}, 3, retryConfig);
         async function updateField(driver: QldbDriver): Promise<void> {
             await driver.executeLambda(async (txn: TransactionExecutor) => {
                 
@@ -321,7 +321,7 @@ describe("StatementExecution", function() {
         try {   
             await Promise.all([updateField(noRetryDriver), updateField(noRetryDriver), updateField(noRetryDriver)]);
         } catch (e) {
-            if (isOccConflictException(e)) {
+            if (isOccConflictException(e as ServiceException)) {
                 occFlag = true;
             }
         }
@@ -386,9 +386,9 @@ describe("StatementExecution", function() {
 
     it("Throws exception when deleting from a table that doesn't exist", async () => {
         const statement: string = "DELETE FROM NonExistentTable";
-        const error: AWSError = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
+        const error = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
             await txn.execute(statement);
         })).to.be.rejected;
-        chai.assert.equal(error.code, "BadRequestException");
+        chai.assert.equal(error.name, "BadRequestException");
     });
 });

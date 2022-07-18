@@ -11,8 +11,6 @@
  * and limitations under the License.
  */
 
-import { AWSError } from "aws-sdk";
-import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import { dom } from "ion-js";
@@ -25,13 +23,17 @@ import { RetryConfig } from "../retry/RetryConfig";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
+import { QLDBSessionClientConfig } from "@aws-sdk/client-qldb-session";
+import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { ServiceException } from "@aws-sdk/smithy-client"
 
 chai.use(chaiAsPromised);
 
 describe("SessionManagement", function() {
     this.timeout(0);
     let testUtils: TestUtils;
-    let config: ClientConfiguration; 
+    let config: QLDBSessionClientConfig; 
+    let httpOptions: NodeHttpHandlerOptions
 
     before(async () => {
         testUtils = new TestUtils(constants.LEDGER_NAME);
@@ -58,14 +60,14 @@ describe("SessionManagement", function() {
 
     it("Throws exception when connecting to a non-existent ledger", async () => {
         const driver: QldbDriver = new QldbDriver("NonExistentLedger", config);
-        let error: AWSError;
+        let error;
         try {
             error = await chai.expect(driver.executeLambda(async (txn: TransactionExecutor) => {
                 await txn.execute(`SELECT name FROM ${constants.TABLE_NAME} WHERE name='Bob'`);
             })).to.be.rejected;
 
         } finally {
-            chai.assert.equal(error.code, "BadRequestException");
+            chai.assert.equal(error.name, "BadRequestException");
             driver.close();
         }
     });
@@ -86,7 +88,7 @@ describe("SessionManagement", function() {
 
     it("Throws exception when all the sessions are busy and pool limit is reached", async () => {
         // Set maxConcurrentTransactions to 1
-        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, 1, defaultRetryConfig);
+        const driver: QldbDriver = new  QldbDriver(constants.LEDGER_NAME, config, httpOptions, 1, defaultRetryConfig);
         try {
             // Execute and do not wait for the promise to resolve, exhausting the pool
             driver.executeLambda(async (txn: TransactionExecutor) => {
@@ -134,7 +136,7 @@ describe("SessionManagement", function() {
     });
 
     it("Properly cleans the transaction state and does not abort it in the middle of a transaction", async () => {
-        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config, 1);
+        const driver: QldbDriver = new QldbDriver(constants.LEDGER_NAME, config, httpOptions, 1);
 
         const noDelayConfig: RetryConfig = new RetryConfig(Number.MAX_VALUE, () => 0);
 
@@ -145,13 +147,12 @@ describe("SessionManagement", function() {
                 await driver.executeLambda(async (txn) => {
                     await txn.execute(`SELECT * FROM ${constants.TABLE_NAME}`);
                     if ((Date.now() - startTime) < 10000) {
-                        const err: AWSError = new Error("mock retryable exception") as AWSError;
-                        err.statusCode = 500;
+                        const err = new ServiceException({ $metadata: { httpStatusCode: 500 }, name: "mock retryable exception", $fault: "server" });
                         throw err;
                     }
                 }, noDelayConfig);
             } catch (e) {
-                chai.assert.fail(e.message);
+                chai.assert.fail(e.name);
             }
         }
     });

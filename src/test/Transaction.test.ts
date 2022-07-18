@@ -14,12 +14,11 @@
 // Test environment imports
 import "mocha";
 
-import {
-    CommitTransactionResult,
-    ExecuteStatementResult,
-    PageToken,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
+import { 
+    CommitTransactionResult, 
+    ExecuteStatementResult, 
+    ValueHolder 
+} from "@aws-sdk/client-qldb-session";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as ionJs from "ion-js";
@@ -29,7 +28,6 @@ import { Readable } from "stream";
 
 import { Communicator } from "../Communicator";
 import * as Errors from "../errors/Errors";
-import * as LogUtil from "../LogUtil";
 import { QldbHash } from "../QldbHash";
 import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
@@ -42,7 +40,7 @@ const sandbox = sinon.createSandbox();
 const testMessage: string = "foo";
 const testStatement: string = "SELECT * FROM foo";
 const testStatementWithQuotes: string = `SELECT * FROM "foo"`;
-const testPageToken: PageToken = "foo";
+const testPageToken: string = "foo";
 const testTransactionId: string = "txnId";
 const testHash: Uint8Array = new Uint8Array([1, 2, 3]);
 const testCommitTransactionResult: CommitTransactionResult = {

@@ -11,10 +11,13 @@
  * and limitations under the License.
  */
 
-import { CommitTransactionResult, ExecuteStatementResult, ValueHolder } from "aws-sdk/clients/qldbsession";
+import { 
+    CommitTransactionResult, 
+    ExecuteStatementResult, 
+    ValueHolder 
+} from "@aws-sdk/client-qldb-session";
 import { dumpBinary, toBase64 } from "ion-js";
 import { Lock } from "semaphore-async-await";
-
 import { Communicator } from "./Communicator";
 import { ClientError } from "./errors/Errors";
 import { QldbHash } from "./QldbHash";
@@ -62,10 +65,10 @@ export class Transaction {
     async commit(): Promise<void> {
         await this._hashLock.acquire();
         try {
-            const commitTxnResult: CommitTransactionResult = await this._communicator.commit(
-                this._txnId,
-                this._txnHash.getQldbHash()
-            );
+            const commitTxnResult: CommitTransactionResult = await this._communicator.commit({
+                TransactionId: this._txnId,
+                CommitDigest: this._txnHash.getQldbHash()
+            });
             if (toBase64(this._txnHash.getQldbHash()) !== toBase64(<Uint8Array>(commitTxnResult.CommitDigest))) {
                 throw new ClientError(
                     `Transaction's commit digest did not match returned value from QLDB.

@@ -11,11 +11,7 @@
  * and limitations under the License.
  */
 
-import {
-    ExecuteStatementResult,
-    FetchPageResult,
-    Page,
-} from "aws-sdk/clients/qldbsession";
+import { ExecuteStatementResult, FetchPageResult, Page } from "@aws-sdk/client-qldb-session";
 import { dom } from "ion-js";
 import { Readable } from "stream";
 

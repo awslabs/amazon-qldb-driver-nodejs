@@ -14,15 +14,6 @@
 // Test environment imports
 import "mocha";
 
-import { QLDBSession } from "aws-sdk";
-import {
-    AbortTransactionResult,
-    ClientConfiguration,
-    ExecuteStatementResult,
-    PageToken,
-    StartTransactionResult,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
@@ -34,7 +25,8 @@ import { QldbSession } from "../QldbSession";
 import { Result } from "../Result";
 import { ResultReadable } from "../ResultReadable";
 import { Transaction } from "../Transaction";
-import { AWSError } from "aws-sdk";
+import { AbortTransactionResult, ExecuteStatementResult, InvalidSessionException, OccConflictException, QLDBSession, QLDBSessionClientConfig, StartTransactionResult, ValueHolder } from "@aws-sdk/client-qldb-session";
+import { TextEncoder } from "util";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -48,15 +40,16 @@ const testMessage: string = "foo";
 const testStatement: string = "SELECT * FROM foo";
 const testAbortTransactionResult: AbortTransactionResult = {};
 
-const testValueHolder: ValueHolder[] = [{IonBinary: "{ hello:\"world\" }"}];
-const testPageToken: PageToken = "foo";
+const enc = new TextEncoder();
+const testValueHolder: ValueHolder[] = [{IonBinary: enc.encode("{ hello:\"world\" }")}];
+const testPageToken: string = "foo";
 const testExecuteStatementResult: ExecuteStatementResult = {
     FirstPage: {
         NextPageToken: testPageToken,
         Values: testValueHolder
     }
 };
-const mockLowLevelClientOptions: ClientConfiguration = {
+const mockLowLevelClientOptions: QLDBSessionClientConfig = {
     region: "fakeRegion"
 };
 const testQldbLowLevelClient: QLDBSession = new QLDBSession(mockLowLevelClientOptions);
@@ -181,7 +174,7 @@ describe("QldbSession", () => {
         });
 
         it("should throw a wrapped exception when fails containing the original exception", async () => {
-            const testError = new Error(testMessage) as AWSError;
+            const testError = new Error(testMessage);
             mockCommunicator.startTransaction = async () => {
                 throw testError;
             };
@@ -193,8 +186,9 @@ describe("QldbSession", () => {
         });
 
         it("should wrap when fails with InvalidSessionException and close the session", async () => {
-            const testError = new Error(testMessage) as AWSError;
-            testError.code = "InvalidSessionException";
+            const testError = new InvalidSessionException({ $metadata: {}});
+            testError.$retryable = { throttling: true };
+            testError.message = testMessage;
 
             mockCommunicator.startTransaction = async () => {
                 throw testError;
@@ -210,8 +204,9 @@ describe("QldbSession", () => {
         });
 
         it("should wrap when fails with OccConflictException and session is still alive", async () => {
-            const testError = new Error(testMessage) as AWSError;
-            testError.code = "OccConflictException";
+            const testError = new OccConflictException({ $metadata: {}});
+            testError.$retryable = { throttling: true };
+            testError.message = testMessage;
             const tryAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
 
             mockCommunicator.startTransaction = async () => {
@@ -243,8 +238,8 @@ describe("QldbSession", () => {
         });
 
         it("should return a rejected promise with a wrapped error when Transaction expires", async () => {
-            const error = new Error("InvalidSession") as AWSError;
-            error.code = "InvalidSessionException";
+            const error = new InvalidSessionException({ $metadata: {}});
+            error.$retryable = { throttling: true };
             error.message = "Transaction ABC has expired";
             const communicatorTransactionSpy = sandbox.spy(mockCommunicator, "startTransaction");
             const communicatorAbortTransactionSpy = sandbox.spy(mockCommunicator, "abortTransaction");

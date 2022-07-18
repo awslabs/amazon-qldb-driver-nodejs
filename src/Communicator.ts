@@ -11,32 +11,32 @@
  * and limitations under the License.
  */
 
-import { QLDBSession } from "aws-sdk";
-import {
-    AbortTransactionResult,
-    CommitDigest,
-    CommitTransactionResult,
-    EndSessionResult,
-    ExecuteStatementResult,
-    FetchPageResult,
-    PageToken,
-    SendCommandRequest,
-    SendCommandResult,
-    StartTransactionResult,
-    ValueHolder
-} from "aws-sdk/clients/qldbsession";
+import { 
+    AbortTransactionResult, 
+    CommitTransactionRequest,
+    CommitTransactionResult, 
+    EndSessionResult, 
+    ExecuteStatementResult, 
+    FetchPageResult, 
+    QLDBSessionClient, 
+    SendCommandCommand, 
+    SendCommandResult, 
+    StartTransactionResult, 
+    ValueHolder 
+} from "@aws-sdk/client-qldb-session";
+
 import { inspect } from "util";
 
 import { debug, warn } from "./LogUtil";
 
 /**
  * A class representing an independent session to a QLDB ledger that handles endpoint requests. This class is used in
- * {@linkcode QldbDriver} and {@linkcode QldbSession}. This class is not meant to be used directly by developers.
+ * {@linkcode QldbDriver} and {@linkcode QldbSessionClient}. This class is not meant to be used directly by developers.
  * 
  * @internal
  */
 export class Communicator {
-    private _qldbClient: QLDBSession;
+    private _qldbClient: QLDBSessionClient;
     private _sessionToken: string;
 
     /**
@@ -44,7 +44,7 @@ export class Communicator {
      * @param qldbClient The low level service client.
      * @param sessionToken The initial session token representing the session connection.
      */
-    private constructor(qldbClient: QLDBSession, sessionToken: string) {
+    private constructor(qldbClient: QLDBSessionClient, sessionToken: string) {
         this._qldbClient = qldbClient;
         this._sessionToken = sessionToken;
     }
@@ -55,13 +55,13 @@ export class Communicator {
      * @param ledgerName The QLDB ledger name.
      * @returns Promise which fulfills with a Communicator.
      */
-    static async create(qldbClient: QLDBSession, ledgerName: string): Promise<Communicator> {
-        const request: SendCommandRequest = {
+    static async create(qldbClient: QLDBSessionClient, ledgerName: string): Promise<Communicator> {
+        const request: SendCommandCommand = new SendCommandCommand({
             StartSession: {
                 LedgerName: ledgerName
             }
-        };
-        const result: SendCommandResult = await qldbClient.sendCommand(request).promise();
+        });
+        const result: SendCommandResult = await qldbClient.send(request);
         return new Communicator(qldbClient, result.StartSession.SessionToken);
     }
 
@@ -70,10 +70,10 @@ export class Communicator {
      * @returns Promise which fulfills with the abort transaction response returned from QLDB.
      */
     async abortTransaction(): Promise<AbortTransactionResult> {
-        const request: SendCommandRequest = {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
             AbortTransaction: {}
-        };
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.AbortTransaction;
     }
@@ -84,14 +84,11 @@ export class Communicator {
      * @param commitDigest The digest hash of the transaction to commit.
      * @returns Promise which fulfills with the commit transaction response returned from QLDB.
      */
-    async commit(txnId: string, commitDigest: CommitDigest): Promise<CommitTransactionResult> {
-        const request: SendCommandRequest = {
+    async commit(commitTransaction: CommitTransactionRequest): Promise<CommitTransactionResult> {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
-            CommitTransaction: {
-                TransactionId: txnId,
-                CommitDigest: commitDigest
-            }
-        };
+            CommitTransaction: commitTransaction
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.CommitTransaction;
     }
@@ -108,14 +105,14 @@ export class Communicator {
         statement: string,
         parameters: ValueHolder[]
     ): Promise<ExecuteStatementResult> {
-        const request: SendCommandRequest = {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
             ExecuteStatement: {
                 Statement: statement,
                 TransactionId: txnId,
                 Parameters: parameters
             }
-        };
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.ExecuteStatement;
     }
@@ -125,10 +122,10 @@ export class Communicator {
      * @returns Promise which fulfills with the end session response returned from QLDB.
      */
     async endSession(): Promise<EndSessionResult> {
-        const request: SendCommandRequest = {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
             EndSession: {}
-        };
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.EndSession;
     }
@@ -139,14 +136,14 @@ export class Communicator {
      * @param pageToken The token to fetch the next page.
      * @returns Promise which fulfills with the fetch page response returned from QLDB.
      */
-    async fetchPage(txnId: string, pageToken: PageToken): Promise<FetchPageResult> {
-        const request: SendCommandRequest = {
+    async fetchPage(txnId: string, pageToken: string | undefined): Promise<FetchPageResult> {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
             FetchPage: {
                 TransactionId: txnId,
                 NextPageToken: pageToken
             }
-        };
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.FetchPage;
     }
@@ -155,7 +152,7 @@ export class Communicator {
      * Get the low-level service client that communicates with QLDB.
      * @returns The low-level service client.
      */
-    getQldbClient(): QLDBSession {
+    getQldbClient(): QLDBSessionClient {
         return this._qldbClient;
     }
 
@@ -172,10 +169,10 @@ export class Communicator {
      * @returns Promise which fulfills with the start transaction response returned from QLDB.
      */
     async startTransaction(): Promise<StartTransactionResult> {
-        const request: SendCommandRequest = {
+        const request: SendCommandCommand = new SendCommandCommand({
             SessionToken: this._sessionToken,
             StartTransaction: {}
-        };
+        });
         const result: SendCommandResult = await this._sendCommand(request);
         return result.StartTransaction;
     }
@@ -185,9 +182,9 @@ export class Communicator {
      * @param request A SendCommandRequest object containing the request information to be sent to QLDB.
      * @returns Promise which fulfills with a SendCommandResult object.
      */
-    private async _sendCommand(request: SendCommandRequest): Promise<SendCommandResult> {
+    private async _sendCommand(request: SendCommandCommand): Promise<SendCommandResult> {
         try {
-            const result = await this._qldbClient.sendCommand(request).promise();
+            const result = await this._qldbClient.send(request);
             debug(`Received response: ${inspect(result, { depth: 2 })}`);
             return result;
         } catch (e) {

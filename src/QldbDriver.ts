@@ -11,8 +11,11 @@
  * and limitations under the License.
  */
 
-import { QLDBSession } from "aws-sdk";
-import { ClientConfiguration } from "aws-sdk/clients/qldbsession";
+import { 
+    QLDBSession,  
+    QLDBSessionClient,   
+    QLDBSessionClientConfig,  
+} from "@aws-sdk/client-qldb-session";
 import { globalAgent } from "http";
 import { dom } from "ion-js";
 import Semaphore from "semaphore-async-await";
@@ -31,6 +34,7 @@ import { BackoffFunction } from "./retry/BackoffFunction";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
+import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
@@ -51,10 +55,9 @@ import { TransactionExecutor } from "./TransactionExecutor";
  */
 export class QldbDriver {
     private _maxConcurrentTransactions: number;
-    private _availablePermits: number;
     private _sessionPool: QldbSession[];
     private _semaphore: Semaphore;
-    private _qldbClient: QLDBSession;
+    private _qldbClient: QLDBSessionClient;
     private _ledgerName: string;
     private _isClosed: boolean;
     private _retryConfig: RetryConfig;
@@ -65,7 +68,7 @@ export class QldbDriver {
      *
      * @param ledgerName The name of the ledger you want to connect to. This is a mandatory parameter.
      * @param qldbClientOptions The object containing options for configuring the low level client.
-     *                          See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/QLDBSession.html#constructor-details|Low Level Client Constructor}.
+     *                          See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor}.
      * @param maxConcurrentTransactions The driver internally uses a pool of sessions to execute the transactions.
      *                                  The maxConcurrentTransactions parameter specifies the number of sessions that the driver can hold in the pool.
      *                                  The default is set to maximum number of sockets specified in the globalAgent.
@@ -77,12 +80,13 @@ export class QldbDriver {
      */
     constructor(
         ledgerName: string,
-        qldbClientOptions: ClientConfiguration = {},
+        qldbClientOptions: QLDBSessionClientConfig = {},
+        httpOptions: NodeHttpHandlerOptions = {},
         maxConcurrentTransactions: number = 0,
         retryConfig: RetryConfig = defaultRetryConfig
     ) {
         qldbClientOptions.customUserAgent = `QLDB Driver for Node.js v${version}`;
-        qldbClientOptions.maxRetries = 0;
+        qldbClientOptions.maxAttempts = 0;
 
         this._qldbClient = new QLDBSession(qldbClientOptions);
         this._ledgerName = ledgerName;
@@ -94,8 +98,8 @@ export class QldbDriver {
         }
 
         let maxSockets: number;
-        if (qldbClientOptions.httpOptions && qldbClientOptions.httpOptions.agent) {
-            maxSockets = qldbClientOptions.httpOptions.agent.maxSockets;
+        if (httpOptions.httpAgent) {
+            maxSockets = httpOptions.httpAgent.maxSockets;
         } else {
             maxSockets = globalAgent.maxSockets;
         }
@@ -112,7 +116,6 @@ export class QldbDriver {
             );
         }
 
-        this._availablePermits = this._maxConcurrentTransactions;
         this._sessionPool = [];
         this._semaphore = new Semaphore(this._maxConcurrentTransactions);
     }
@@ -178,57 +181,59 @@ export class QldbDriver {
         }
 
         // Acquire semaphore and get a session from the pool
-        const getSession = async function(thisDriver: QldbDriver, startNewSession: boolean): Promise<QldbSession> {
+        const getSession = async function(thisDriver: QldbDriver): Promise<QldbSession> {
             debug(
                 `Getting session. Current free session count: ${thisDriver._sessionPool.length}. ` +
-                `Currently available permit count: ${thisDriver._availablePermits}.`
+                `Currently available permit count: ${thisDriver._semaphore.getPermits()}.`
             );
             if (thisDriver._semaphore.tryAcquire()) {
-                thisDriver._availablePermits--;
-                try {
-                    let session: QldbSession
-                    if (!startNewSession) {
-                        session = thisDriver._sessionPool.pop();
-                    }
-                    if (startNewSession || session == undefined) {
-                        debug("Creating a new session.");
-                        const communicator: Communicator = 
-                            await Communicator.create(thisDriver._qldbClient, thisDriver._ledgerName);
-                        session = new QldbSession(communicator);
-                    }
-                    return session;
-                } catch (e) {
-                    thisDriver._semaphore.release();
-                    thisDriver._availablePermits++;
-            
-                    // An error when failing to start a new session is always retryable
-                    throw new ExecuteError(e as Error, true, true);
+                let session = thisDriver._sessionPool.pop();                
+                if (session == undefined) {
+                    debug(`Creating a new pooled session.`);
+                    session = await createNewSession(thisDriver);
                 }
+                return session;
             } else {
                 throw new SessionPoolEmptyError()
             }
         }
 
+        const createNewSession = async(thisDriver: QldbDriver) => {
+            try {
+                const communicator: Communicator =             
+                await Communicator.create(thisDriver._qldbClient, thisDriver._ledgerName);
+                return new QldbSession(communicator);
+            } catch (e) {
+                // An error when failing to start a new session is always retryable
+                throw new ExecuteError(e as Error, true, true);
+            }
+        }
+
         // Release semaphore and if the session is alive return it to the pool and return true
         const releaseSession = function(thisDriver: QldbDriver, session: QldbSession): boolean {
-            if (session != null) {
+            if (session != null && session.isAlive()) {
+                thisDriver._sessionPool.push(session);
                 thisDriver._semaphore.release();
-                thisDriver._availablePermits++;
-                if (session.isAlive()) {
-                    thisDriver._sessionPool.push(session);
-                    return true;
-                }
+                debug(`Session returned to pool; pool size is now: ${thisDriver._sessionPool.length}`)
+                return true
+            } else if (session != null) {
+                thisDriver._semaphore.release();
+                return false;
+            } else {
+                return false;
             }
-            return false;
         }
         
         retryConfig = (retryConfig == null) ? this._retryConfig : retryConfig;
-        let session: QldbSession;
-        let startNewSession: boolean = false;
+        let replaceDeadSession: boolean = false;
         for (let retryAttempt: number = 1; true; retryAttempt++) {
+            let session: QldbSession = null;
             try {
-                session = null;
-                session = await getSession(this, startNewSession);
+                if (replaceDeadSession) {
+                    await createNewSession(this);
+                } else {
+                    session = await getSession(this);
+                }
                 return await session.executeLambda(transactionLambda);
             } catch (e) {
                 if (e instanceof ExecuteError) {
@@ -259,7 +264,7 @@ export class QldbDriver {
                     throw e;
                 }
             } finally {
-                startNewSession = !releaseSession(this, session);
+                replaceDeadSession = !releaseSession(this, session);
             }
         }
     }

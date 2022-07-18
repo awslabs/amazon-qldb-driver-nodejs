@@ -14,7 +14,6 @@
 // Test environment imports
 import "mocha";
 
-import { AWSError } from "aws-sdk";
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as sinon from "sinon";
@@ -34,18 +33,18 @@ import {
     isBadRequestException
 } from "../errors/Errors";
 import * as LogUtil from "../LogUtil";
+import { BadRequestException, InvalidSessionException, OccConflictException } from "@aws-sdk/client-qldb-session";
+import { InvalidParameterException, ResourceNotFoundException, ResourcePreconditionNotMetException } from "@aws-sdk/client-qldb";
+import { ServiceException } from "@aws-sdk/smithy-client";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
 
 const testMessage: string = "foo";
-const mockError: AWSError = <AWSError><any> sandbox.mock(Error);
 
 describe("Errors", () => {
 
     afterEach(() => {
-        mockError.code = undefined;
-        mockError.statusCode = undefined;
         sandbox.restore();
     });
 
@@ -92,110 +91,105 @@ describe("Errors", () => {
 
     describe("#isInvalidParameterException()", () => {
         it("should return true when error is an InvalidParameterException", () => {
-            mockError.code = "InvalidParameterException";
+            const mockError = new InvalidParameterException({ $metadata: {}});
             chai.assert.isTrue(isInvalidParameterException(mockError));
         });
 
         it("should return false when error is not an InvalidParameterException", () => {
-            mockError.code = "NotInvalidParameterException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isInvalidParameterException(mockError));
         });
     });
 
     describe("#isInvalidSessionException()", () => {
         it("should return true when error is an InvalidSessionException", () => {
-            mockError.code = "InvalidSessionException";
+            const mockError = new InvalidSessionException({ $metadata: {}});
             chai.assert.isTrue(isInvalidSessionException(mockError));
         });
 
         it("should return false when error is not an InvalidSessionException", () => {
-            mockError.code = "NotInvalidSessionException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isInvalidSessionException(mockError));
         });
     });
 
     describe("#isOccConflictException()", () => {
         it("should return true when error is an OccConflictException", () => {
-            mockError.code = "OccConflictException";
+            const mockError = new OccConflictException({ $metadata: {}});
             chai.assert.isTrue(isOccConflictException(mockError));
         });
 
         it("should return false when error is not an OccConflictException", () => {
-            mockError.code = "NotOccConflictException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isOccConflictException(mockError));
         });
     });
 
     describe("#isResourceNotFoundException()", () => {
         it("should return true when error is a ResourceNotFoundException", () => {
-            mockError.code = "ResourceNotFoundException";
+            const mockError = new ResourceNotFoundException({ $metadata: {}});
             chai.assert.isTrue(isResourceNotFoundException(mockError));
         });
 
         it("should return false when error is not a ResourceNotFoundException", () => {
-            mockError.code = "NotResourceNotFoundException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isResourceNotFoundException(mockError));
         });
     });
 
     describe("#isResourcePreconditionNotMetException()", () => {
         it("should return true when error is a ResourcePreconditionNotMetException", () => {
-            mockError.code = "ResourcePreconditionNotMetException";
+            const mockError = new ResourcePreconditionNotMetException({ $metadata: {}});
             chai.assert.isTrue(isResourcePreconditionNotMetException(mockError));
         });
 
         it("should return false when error is not a ResourcePreconditionNotMetException", () => {
-            mockError.code = "NotResourcePreconditionNotMetException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isResourcePreconditionNotMetException(mockError));
         });
     });
 
     describe("#isRetryableException()", () => {
         it("should return true with statusCode 500", () => {
-            mockError.code = "NotRetryableException";
-            mockError.statusCode = 500;
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 500 }, name: "", $fault: "server" });
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
-        it("should reeturn true with statusCode 503", () => {
-            mockError.code = "NotRetryableException";
-            mockError.statusCode = 503;
+        it("should return true with statusCode 503", () => {
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 503 }, name: "", $fault: "server" });
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
-
+        
         it("should return true when error is NoHttpResponseException", () => {
-            mockError.code = "NoHttpResponseException";
-            mockError.statusCode = 200;
+            const mockError = new ServiceException({ $metadata: { }, name: "NoHttpResponseException", $fault: "client" })
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should return true when error is SocketTimeoutException", () => {
-            mockError.code = "SocketTimeoutException";
-            mockError.statusCode = 200;
+            const mockError = new ServiceException({ $metadata: { }, name: "SocketTimeoutException", $fault: "client" })
             chai.assert.isTrue(isRetryableException(mockError, false));
         });
 
         it("should return false when not a retryable exception", () => {
-            mockError.code = "NotRetryableException";
-            mockError.statusCode = 200;
+            const mockError = new ServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server" });
             chai.assert.isFalse(isRetryableException(mockError, false));
         });
 
         it("should appropriately handle retryable errors from the SDK", () => {
-            const awsError: AWSError = <AWSError><any> sandbox.mock(Error);
+            const awsError = new ServiceException({ $metadata: { httpStatusCode: 200 }, name: "", $fault: "server", });
 
             // Empty retryable causes false
-            awsError.retryable = undefined;
+            awsError.$retryable = undefined;
             chai.assert.isFalse(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
             
             // False retryable causes false
-            awsError.retryable = false;
+            awsError.$retryable =  { throttling: false };
             chai.assert.isFalse(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
 
             // True retryable causes true, but only if not on commit
-            awsError.retryable = true;
+            awsError.$retryable = { throttling: true };
             chai.assert.isTrue(isRetryableException(awsError, false));
             chai.assert.isFalse(isRetryableException(awsError, true));
         });
@@ -203,31 +197,31 @@ describe("Errors", () => {
 
     describe("#isTransactionExpiredException", () => {
         it("should return true when error is an InvalidSessionException and message is Tranaction <txId> has expired", () => {
-            mockError.code = "InvalidSessionException";
+            const mockError = new InvalidSessionException({ $metadata: {}});
             mockError.message = "Transaction ABC has expired"
             chai.assert.isTrue(isTransactionExpiredException(mockError));
         });
 
         it("should return false when error is an InvalidSessionException but message is different", () => {
-            mockError.code = "InvalidSessionException";
+            const mockError = new InvalidSessionException({ $metadata: {}});
             mockError.message = "SessionNotIdentified"
             chai.assert.isFalse(isTransactionExpiredException(mockError));
         });
 
         it("should return false when error is not an InvalidSessionException ", () => {
-            mockError.code = "NotInvalidSessionException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isTransactionExpiredException(mockError));
         });
     });
 
     describe("#isBadRequestException()", () => {
         it("should return true when error is a BadRequestException", () => {
-            mockError.code = "BadRequestException";
+            const mockError = new BadRequestException({ $metadata: {} });
             chai.assert.isTrue(isBadRequestException(mockError));
         });
 
         it("should return false when error is not a BadRequestException", () => {
-            mockError.code = "NotBadRequestException";
+            const mockError = new ServiceException({ $metadata: {}, name: "", $fault: "server" });
             chai.assert.isFalse(isBadRequestException(mockError));
         });
     });
