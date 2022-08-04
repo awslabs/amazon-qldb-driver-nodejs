@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2015",
         "module": "commonjs",
-        "lib": [ "ES2015" ],
+        "lib": [ "ES2015", "DOM" ],
         "strict": true,
         "strictNullChecks": false,
         "resolveJsonModule": true,

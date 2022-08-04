@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@aws-sdk/client-qldb-session": "^3.58.0",
+    "@aws-sdk/client-qldb-session": "^3.141.0",
     "@types/node": "^18.0.1",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
@@ -15,27 +15,27 @@
     "node": ">=14.0.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-qldb": "^3.58.0",
+    "@aws-sdk/client-qldb": "^3.141.0",
     "@types/chai": "^4.2.10",
-    "@types/chai-as-promised": "^7.1.2",
+    "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^9.1.1",
     "@types/sinon": "^10.0.12",
-    "@typescript-eslint/eslint-plugin": "^5.30.5",
-    "@typescript-eslint/parser": "^5.30.5",
+    "@typescript-eslint/eslint-plugin": "^5.32.0",
+    "@typescript-eslint/parser": "^5.32.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
-    "eslint": "^8.19.0",
-    "eslint-plugin-jsdoc": "^39.3.3",
+    "eslint": "^8.21.0",
+    "eslint-plugin-jsdoc": "^39.3.4",
     "grunt": "^1.0.4",
-    "ion-js": "^4.0.0",
+    "ion-js": "^4.3.0",
     "jsbi": "^3.1.1",
     "mocha": "^10.0.0",
     "mocha-param": "^2.0.1",
     "nyc": "^15.1.0",
     "sinon": "^14.0.0",
     "ts-node": "^10.8.2",
-    "typedoc": "^0.23.5",
+    "typedoc": "^0.23.10",
     "typescript": "^4.7.4"
   },
   "peerDependencies": {
@@ -43,6 +43,8 @@
     "jsbi": "^3.1.1"
   },
   "scripts": {
+    "clean": "rm -rf node_modules",
+    "reinstall": "npm ci",
     "build": "npm run lint && tsc",
     "doc": "typedoc --out docs ./src --exclude **/*.test.ts",
     "installAndPack": "npm install . && npm pack && rm $npm_package_name-$npm_package_version.tgz",
