@@ -1,3 +1,12 @@
+# 3.0.0 (2022-08-TBD)
+All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) to learn how to migrate to the AWS SDK for JavaScript V3 from AWS SDK for JavaScript V2.  
+
+## :tada: Enhancements
+* Migrated to [AWS SDK for JavasScript V3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html).
+
+## :boom: Breaking changes
+* Updated driver to comply with new [service exception class](https://aws.amazon.com/blogs/developer/service-error-handling-modular-aws-sdk-js/) and new [modular session APIs](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsession.html).
+
 # 2.2.0
 This release is focused on improving the retry logic, optimizing it and handling more possible failures, as well as more 
 strictly defining the API to help prevent misuse. These changes are potentially breaking if the driver is being used in 
