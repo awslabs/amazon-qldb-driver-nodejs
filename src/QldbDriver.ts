@@ -34,7 +34,7 @@ import { BackoffFunction } from "./retry/BackoffFunction";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
-import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
@@ -67,16 +67,19 @@ export class QldbDriver {
      * is always attached to one ledger, as specified in the ledgerName parameter.
      *
      * @param ledgerName The name of the ledger you want to connect to. This is a mandatory parameter.
-     * @param qldbClientOptions The object containing options for configuring the low level client.
+     * @param qldbClientOptions The object containing options for configuring the low level client. 
      *                          See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor}.
+     * @param httpOptions The object containing options for configuring the low level http request handler for qldb session client. 
+     *                    See {@link https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/interfaces/nodehttphandleroptions.html}
      * @param maxConcurrentTransactions The driver internally uses a pool of sessions to execute the transactions.
      *                                  The maxConcurrentTransactions parameter specifies the number of sessions that the driver can hold in the pool.
-     *                                  The default is set to maximum number of sockets specified in the globalAgent.
+     *                                  The default is set to maximum number of sockets specified for the `httpAgent` in `httpOptions`. If `httpAgent` is not defined, 
+     *                                  the default of `maxConcurrentTransactions` takes the `maxSockets` value from the `globalAgent`. 
      *                                  See {@link https://docs.aws.amazon.com/qldb/latest/developerguide/driver.best-practices.html#driver.best-practices.configuring} for more details.
      * @param retryConfig Config to specify max number of retries, base and custom backoff strategy for retries. Will be overridden if a different retryConfig
      *                    is passed to {@linkcode executeLambda}.
      *
-     * @throws RangeError if `maxConcurrentTransactions` is less than 0.
+     * @throws RangeError if `maxConcurrentTransactions` is less than 0 or more than `maxSockets` set by `httpAgent` or `globalAgent`.
      */
     constructor(
         ledgerName: string,
@@ -87,6 +90,7 @@ export class QldbDriver {
     ) {
         qldbClientOptions.customUserAgent = `QLDB Driver for Node.js v${version}`;
         qldbClientOptions.maxAttempts = 0;
+        qldbClientOptions.requestHandler = new NodeHttpHandler(httpOptions);
 
         this._qldbClient = new QLDBSession(qldbClientOptions);
         this._ledgerName = ledgerName;
@@ -100,6 +104,8 @@ export class QldbDriver {
         let maxSockets: number;
         if (httpOptions.httpAgent) {
             maxSockets = httpOptions.httpAgent.maxSockets;
+        } else if (httpOptions.httpsAgent) {
+            maxSockets = httpOptions.httpsAgent.maxSockets;
         } else {
             maxSockets = globalAgent.maxSockets;
         }

@@ -28,7 +28,8 @@ import { Result } from "../Result";
 import { TransactionExecutor } from "../TransactionExecutor";
 import { RetryConfig } from "../retry/RetryConfig";
 import { InvalidSessionException, OccConflictException, QLDBSession, QLDBSessionClientConfig, SendCommandResult } from "@aws-sdk/client-qldb-session";
-import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { globalAgent } from "http";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
@@ -73,16 +74,29 @@ describe("QldbDriver", () => {
         sendCommandStub = sandbox.stub(testQldbLowLevelClient, "send");
         sendCommandStub.resolves(testSendCommandResult);
 
-        qldbDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions);
+        qldbDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions);
     });
 
     afterEach(() => {
-        mockAgent.maxSockets = testMaxSockets;
         sandbox.restore();
     });
 
     describe("#constructor()", () => {
         it("should have all attributes equal to mock values when constructor called", async () => {
+            chai.assert.equal(qldbDriver["_ledgerName"], testLedgerName);
+            chai.assert.equal(qldbDriver["_isClosed"], false);
+            chai.assert.instanceOf(qldbDriver["_qldbClient"], QLDBSession);
+            chai.assert.equal(await qldbDriver["_qldbClient"].config.maxAttempts(), testMaxRetries);
+            chai.assert.equal(qldbDriver["_maxConcurrentTransactions"], globalAgent.maxSockets);
+            chai.assert.deepEqual(qldbDriver["_sessionPool"], []);
+            chai.assert.instanceOf(qldbDriver["_semaphore"], Semaphore);
+            chai.assert.equal(qldbDriver["_semaphore"]["permits"], globalAgent.maxSockets);
+            chai.assert.equal(qldbDriver["_retryConfig"], defaultRetryConfig);
+            chai.assert.equal(qldbDriver["_retryConfig"]["_retryLimit"], testDefaultRetryLimit);
+        });
+
+        it("should have all attributes equal to mock values when constructor called with customized http agent", async () => {
+            qldbDriver = new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions);
             chai.assert.equal(qldbDriver["_ledgerName"], testLedgerName);
             chai.assert.equal(qldbDriver["_isClosed"], false);
             chai.assert.instanceOf(qldbDriver["_qldbClient"], QLDBSession);
@@ -95,6 +109,22 @@ describe("QldbDriver", () => {
             chai.assert.equal(qldbDriver["_retryConfig"]["_retryLimit"], testDefaultRetryLimit);
         });
 
+        it("should have all attributes equal to mock values when constructor called with customized session client with http agent", async () => {
+            testLowLevelClientOptions.requestHandler = new NodeHttpHandler({httpsAgent: new Agent({maxSockets: 30})});
+            testQldbLowLevelClient = new QLDBSession(testLowLevelClientOptions); 
+            qldbDriver = new QldbDriver(testLedgerName, testQldbLowLevelClient, testLowLevelClientHttpOptions);
+            chai.assert.equal(qldbDriver["_ledgerName"], testLedgerName);
+            chai.assert.equal(qldbDriver["_isClosed"], false);
+            chai.assert.instanceOf(qldbDriver["_qldbClient"], QLDBSession);
+            chai.assert.equal(await qldbDriver["_qldbClient"].config.maxAttempts(), testMaxRetries);
+            chai.assert.equal(qldbDriver["_maxConcurrentTransactions"], mockAgent.maxSockets);
+            chai.assert.deepEqual(qldbDriver["_sessionPool"], []);
+            chai.assert.instanceOf(qldbDriver["_semaphore"], Semaphore);
+            chai.assert.equal(qldbDriver["_semaphore"]["permits"], mockAgent.maxSockets);
+            chai.assert.equal(qldbDriver["_retryConfig"], defaultRetryConfig);
+            chai.assert.equal(qldbDriver["_retryConfig"]["_retryLimit"], testDefaultRetryLimit);
+        });
+        
         it("should throw a RangeError when retryLimit less than zero passed in", () => {
             const constructorFunction: () => void = () => {
                 new QldbDriver(testLedgerName, testLowLevelClientOptions, testLowLevelClientHttpOptions, -1);
