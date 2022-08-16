@@ -16,10 +16,10 @@
   },
   "devDependencies": {
     "@aws-sdk/client-qldb": "^3.141.0",
-    "@types/chai": "^4.2.10",
+    "@types/chai": "^4.3.1",
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^9.1.1",
-    "@types/sinon": "^10.0.12",
+    "@types/sinon": "^10.0.13",
     "@typescript-eslint/eslint-plugin": "^5.32.0",
     "@typescript-eslint/parser": "^5.32.0",
     "chai": "^4.2.0",
