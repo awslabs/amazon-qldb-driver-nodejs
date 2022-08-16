@@ -5,7 +5,51 @@ All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK
 * Migrated to [AWS SDK for JavasScript V3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html).
 
 ## :boom: Breaking changes
-* Updated driver to comply with new [service exception class](https://aws.amazon.com/blogs/developer/service-error-handling-modular-aws-sdk-js/) and new [modular session APIs](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsession.html).
+* Changed driver constructor to take a new type of [qldbClientOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor) and added a new parameter [httpOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/interfaces/nodehttphandleroptions.html) to configure the low level node http client separately. Application code needs to be modified for driver construction.
+For example, the following:
+```
+import { Agent } from 'https';
+import { QldbDriver, RetryConfig  } from 'amazon-qldb-driver-nodejs';
+
+const maxConcurrentTransactions: number = 10;
+
+const agentForQldb: Agent = new Agent({
+    keepAlive: true,
+    maxSockets: maxConcurrentTransactions
+});
+
+const serviceConfigurationOptions = {
+    region: "us-east-1",
+    httpOptions: {
+        agent: agentForQldb
+    }
+};
+
+const qldbDriver: QldbDriver = new QldbDriver("testLedger", serviceConfigurationOptions, maxConcurrentTransactions);
+```
+Should be changed to
+
+```
+import { Agent } from 'https';
+import { QldbDriver, RetryConfig  } from 'amazon-qldb-driver-nodejs';
+import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+
+const maxConcurrentTransactions: number = 10;
+
+const lowLevelClientHttpOptions: NodeHttpHandlerOptions = {
+    httpAgent: new Agent({
+      keepAlive: true,
+      maxSockets: maxConcurrentTransactions
+    })
+};
+
+const serviceConfigurationOptions = {
+    region: "us-east-1"
+};
+
+const qldbDriver: QldbDriver = new QldbDriver("testLedger", serviceConfigurationOptions, lowLevelClientHttpOptions, maxConcurrentTransactions);
+```
+* Updated driver to comply with new [service exception class](https://aws.amazon.com/blogs/developer/service-error-handling-modular-aws-sdk-js/).
 
 # 2.2.0
 This release is focused on improving the retry logic, optimizing it and handling more possible failures, as well as more 
