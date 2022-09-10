@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "@aws-sdk/client-qldb-session": "^3.141.0",
-    "@types/node": "^18.0.1",
+    "@aws-sdk/client-qldb-session": "^3.165.0",
+    "@types/node": "^18.7.15",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
@@ -20,12 +20,12 @@
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^9.1.1",
     "@types/sinon": "^10.0.13",
-    "@typescript-eslint/eslint-plugin": "^5.32.0",
-    "@typescript-eslint/parser": "^5.32.0",
+    "@typescript-eslint/eslint-plugin": "^5.36.2",
+    "@typescript-eslint/parser": "^5.36.2",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
-    "eslint": "^8.21.0",
+    "eslint": "^8.23.0",
     "eslint-plugin-jsdoc": "^39.3.4",
     "grunt": "^1.5.3",
     "ion-js": "^4.3.0",
@@ -35,7 +35,7 @@
     "nyc": "^15.1.0",
     "sinon": "^14.0.0",
     "ts-node": "^10.8.2",
-    "typedoc": "^0.23.10",
+    "typedoc": "^0.23.14",
     "typescript": "^4.7.4"
   },
   "peerDependencies": {
