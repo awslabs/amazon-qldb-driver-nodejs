@@ -1,4 +1,4 @@
-# 3.0.0 (2022-08-TBD)
+# 3.0.0 (2022-09-26)
 All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) to learn how to migrate to the AWS SDK for JavaScript V3 from AWS SDK for JavaScript V2.  
 
 ## :tada: Enhancements
@@ -7,7 +7,7 @@ All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK
 ## :boom: Breaking changes
 * Changed driver constructor to take a new type of [qldbClientOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor) and added a new parameter [httpOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/interfaces/nodehttphandleroptions.html) to configure the low level node http client separately. Application code needs to be modified for driver construction.
 For example, the following:
-```
+```typescript
 import { Agent } from 'https';
 import { QldbDriver, RetryConfig  } from 'amazon-qldb-driver-nodejs';
 
@@ -29,7 +29,7 @@ const qldbDriver: QldbDriver = new QldbDriver("testLedger", serviceConfiguration
 ```
 Should be changed to
 
-```
+```typescript
 import { Agent } from 'https';
 import { QldbDriver, RetryConfig  } from 'amazon-qldb-driver-nodejs';
 import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
