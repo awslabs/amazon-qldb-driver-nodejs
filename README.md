@@ -36,22 +36,23 @@ To use the driver, in your package that wishes to use the driver, run the follow
 
 ```npm install amazon-qldb-driver-nodejs```
 
-The driver also has aws-sdk, ion-js and jsbi as peer dependencies. Thus, they must also be dependencies of the package that will be using the driver as a dependency.
+The driver also has @aws-sdk/client-qldb-session, ion-js and jsbi as peer dependencies. Thus, they must also be dependencies of the package that will be using the driver as a dependency.
 
-```npm install aws-sdk```
+```npm install @aws-sdk/client-qldb-session```
 
 ```npm install ion-js```
 
 ```npm install jsbi```
 
-#### Note: For using version 2.1.0 and above of the driver, the version of the aws-sdk should be >= 2.815
+#### Note: For using version 3.0.0 and above of the driver, the version of the aws-sdk should be >= 3.x
 
 Then from within your package, you can now use the driver by importing it. This example shows usage in TypeScript specifying the QLDB ledger name and a specific region:
 
-```javascript
+```typescript
+import { QLDBSessionClientConfig } from "@aws-sdk/client-qldb-session";
 import { QldbDriver } from "amazon-qldb-driver-nodejs";
 
-const testServiceConfigOptions = {
+const testServiceConfigOption: QLDBSessionClientConfig = {
     region: "us-east-1"
 };
 
