@@ -4,6 +4,9 @@ All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK
 ## :tada: Enhancements
 * Migrated to [AWS SDK for JavasScript V3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html).
 
+## :bug: Bug Fixes
+* Fixed a order of operations bug in `defaultBackoffFunction` which would add up-to 10s of sleep over 4 retries, versus less than 300 ms total sleep between 4 retries. The defaultBackoffFunction strategy is defaulted if users do not provide their own backoff strategy function for the `RetryConfig`.
+
 ## :boom: Breaking changes
 * Changed driver constructor to take a new type of [qldbClientOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/classes/qldbsessionclient.html#constructor) and added a new parameter [httpOptions](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-qldb-session/interfaces/nodehttphandleroptions.html) to configure the low level node http client separately. Application code needs to be modified for driver construction.
 For example, the following:

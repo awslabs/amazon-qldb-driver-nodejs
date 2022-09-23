@@ -19,6 +19,7 @@ const SLEEP_BASE_MS: number = 10;
 
 /**
  * A default backoff function which returns the amount of time(in milliseconds) to delay the next retry attempt
+ * Reference: https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
  * 
  * @param retryAttempt The number of attempts done till now 
  * @param error The error that occurred while executing the previous transaction
@@ -27,9 +28,8 @@ const SLEEP_BASE_MS: number = 10;
  * @internal
  */
 export const defaultBackoffFunction: BackoffFunction = (retryAttempt: number, error: Error, transactionId: string) => {
-    const exponentialBackoff: number = Math.min(SLEEP_CAP_MS, Math.pow(SLEEP_BASE_MS * 2,  retryAttempt));
-    const jitterRand: number = Math.random();
-    const delayTime: number = jitterRand * exponentialBackoff;
+    const fullJitterBackoffMax: number = Math.min(SLEEP_CAP_MS, SLEEP_BASE_MS * 2 ** retryAttempt);
+    const delayTime: number = Math.random() * fullJitterBackoffMax;
     return delayTime;
 }
 
