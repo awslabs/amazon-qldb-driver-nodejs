@@ -39,5 +39,7 @@ jobs:
 
     - name: Test
       run: |
+        GITHUB_SHA_SHORT=$(git rev-parse --short $GITHUB_SHA)
         npm test
-        npm run integrationTest
+        npm run integrationTest --test-ledger-suffix=${{ strategy.job-index }}-$GITHUB_SHA_SHORT
+      shell: bash
