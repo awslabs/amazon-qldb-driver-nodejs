@@ -103,7 +103,7 @@ describe("Errors", () => {
 
     describe("#isInvalidSessionException()", () => {
         it("should return true when error is an InvalidSessionException", () => {
-            const mockError = new InvalidSessionException({ $metadata: {}});
+            const mockError = new InvalidSessionException({ message: "", $metadata: {}});
             chai.assert.isTrue(isInvalidSessionException(mockError));
         });
 
@@ -115,7 +115,7 @@ describe("Errors", () => {
 
     describe("#isOccConflictException()", () => {
         it("should return true when error is an OccConflictException", () => {
-            const mockError = new OccConflictException({ $metadata: {}});
+            const mockError = new OccConflictException({ message: "", $metadata: {}});
             chai.assert.isTrue(isOccConflictException(mockError));
         });
 
@@ -197,13 +197,13 @@ describe("Errors", () => {
 
     describe("#isTransactionExpiredException", () => {
         it("should return true when error is an InvalidSessionException and message is Tranaction <txId> has expired", () => {
-            const mockError = new InvalidSessionException({ $metadata: {}});
+            const mockError = new InvalidSessionException({ message: "", $metadata: {}});
             mockError.message = "Transaction ABC has expired"
             chai.assert.isTrue(isTransactionExpiredException(mockError));
         });
 
         it("should return false when error is an InvalidSessionException but message is different", () => {
-            const mockError = new InvalidSessionException({ $metadata: {}});
+            const mockError = new InvalidSessionException({ message: "", $metadata: {}});
             mockError.message = "SessionNotIdentified"
             chai.assert.isFalse(isTransactionExpiredException(mockError));
         });
@@ -216,7 +216,7 @@ describe("Errors", () => {
 
     describe("#isBadRequestException()", () => {
         it("should return true when error is a BadRequestException", () => {
-            const mockError = new BadRequestException({ $metadata: {} });
+            const mockError = new BadRequestException({ message: "", $metadata: {} });
             chai.assert.isTrue(isBadRequestException(mockError));
         });
 
