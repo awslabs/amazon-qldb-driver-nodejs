@@ -91,7 +91,7 @@ describe("Errors", () => {
 
     describe("#isInvalidParameterException()", () => {
         it("should return true when error is an InvalidParameterException", () => {
-            const mockError = new InvalidParameterException({ $metadata: {}});
+            const mockError = new InvalidParameterException({ message: "", $metadata: {}});
             chai.assert.isTrue(isInvalidParameterException(mockError));
         });
 
@@ -127,7 +127,7 @@ describe("Errors", () => {
 
     describe("#isResourceNotFoundException()", () => {
         it("should return true when error is a ResourceNotFoundException", () => {
-            const mockError = new ResourceNotFoundException({ $metadata: {}});
+            const mockError = new ResourceNotFoundException({ message: "", $metadata: {}});
             chai.assert.isTrue(isResourceNotFoundException(mockError));
         });
 
@@ -139,7 +139,7 @@ describe("Errors", () => {
 
     describe("#isResourcePreconditionNotMetException()", () => {
         it("should return true when error is a ResourcePreconditionNotMetException", () => {
-            const mockError = new ResourcePreconditionNotMetException({ $metadata: {}});
+            const mockError = new ResourcePreconditionNotMetException({ message: "", $metadata: {}});
             chai.assert.isTrue(isResourcePreconditionNotMetException(mockError));
         });
 
