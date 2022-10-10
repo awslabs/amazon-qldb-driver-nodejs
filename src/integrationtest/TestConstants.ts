@@ -18,4 +18,6 @@ export const COLUMN_NAME = "Name";
 export const SINGLE_DOCUMENT_VALUE = "SingleDocumentValue";
 export const MULTI_DOC_VALUE_1 = "MultipleDocumentValue1";
 export const MULTI_DOC_VALUE_2 = "MultipleDocumentValue2";
-export const LEDGER_NAME = "Node-TestLedger";
+export const LEDGER_NAME = process.env.npm_config_test_ledger_suffix ?
+  `Node-TestLedger-${process.env.npm_config_test_ledger_suffix}` :
+  "Node-TestLedger";

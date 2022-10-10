@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      max-parallel: 1
+      max-parallel: 3
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node-version: [14.x, 16.x, 18.x]
@@ -39,5 +39,7 @@ jobs:
 
     - name: Test
       run: |
+        GITHUB_SHA_SHORT=$(git rev-parse --short $GITHUB_SHA)
         npm test
-        npm run integrationTest
+        npm run integrationTest --test-ledger-suffix=${{ strategy.job-index }}-$GITHUB_SHA_SHORT
+      shell: bash
