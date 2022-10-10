@@ -193,7 +193,7 @@ describe("QldbDriver", () => {
             const lambda = async (transactionExecutor: TransactionExecutor) => {
                 return true;
             };
-            const error = new InvalidSessionException({ $metadata: {}});
+            const error = new InvalidSessionException({ message: "", $metadata: {}});
             error.message = "Transaction ABC has expired";
 
             mockSession1.executeLambda = async () => {
@@ -221,7 +221,7 @@ describe("QldbDriver", () => {
             const mockSession: QldbSession = <QldbSession><any> sandbox.mock(QldbSession);
             const errorCode: string = "OccConflictException";
             mockSession.executeLambda = async () => {
-                const error = new OccConflictException({ $metadata: {}});
+                const error = new OccConflictException({ message: "", $metadata: {}});
                 throw new ExecuteError(error, true, false);
             };
             const executeLambdaSpy = sandbox.spy(mockSession, "executeLambda");

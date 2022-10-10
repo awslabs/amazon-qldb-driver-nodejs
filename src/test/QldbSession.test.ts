@@ -186,7 +186,7 @@ describe("QldbSession", () => {
         });
 
         it("should wrap when fails with InvalidSessionException and close the session", async () => {
-            const testError = new InvalidSessionException({ $metadata: {}});
+            const testError = new InvalidSessionException({ message: "", $metadata: {}});
             testError.$retryable = { throttling: true };
             testError.message = testMessage;
 
@@ -204,7 +204,7 @@ describe("QldbSession", () => {
         });
 
         it("should wrap when fails with OccConflictException and session is still alive", async () => {
-            const testError = new OccConflictException({ $metadata: {}});
+            const testError = new OccConflictException({ message: "", $metadata: {}});
             testError.$retryable = { throttling: true };
             testError.message = testMessage;
             const tryAbortSpy = sandbox.spy(mockCommunicator, "abortTransaction");
@@ -238,7 +238,7 @@ describe("QldbSession", () => {
         });
 
         it("should return a rejected promise with a wrapped error when Transaction expires", async () => {
-            const error = new InvalidSessionException({ $metadata: {}});
+            const error = new InvalidSessionException({ message: "", $metadata: {}});
             error.$retryable = { throttling: true };
             error.message = "Transaction ABC has expired";
             const communicatorTransactionSpy = sandbox.spy(mockCommunicator, "startTransaction");
