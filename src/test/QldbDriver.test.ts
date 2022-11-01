@@ -27,7 +27,13 @@ import { defaultRetryConfig } from "../retry/DefaultRetryConfig";
 import { Result } from "../Result";
 import { TransactionExecutor } from "../TransactionExecutor";
 import { RetryConfig } from "../retry/RetryConfig";
-import { InvalidSessionException, OccConflictException, QLDBSession, QLDBSessionClientConfig, SendCommandResult } from "@aws-sdk/client-qldb-session";
+import {
+    InvalidSessionException,
+    OccConflictException,
+    QLDBSession,
+    QLDBSessionClientConfig,
+    SendCommandResult
+} from "@aws-sdk/client-qldb-session";
 import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 import { globalAgent } from "http";
 
@@ -183,6 +189,37 @@ describe("QldbDriver", () => {
             chai.assert.equal(result, mockResult);
             sinon.assert.calledOnce(executeStub);
             sinon.assert.calledWith(executeStub, lambda);
+        });
+
+        it("should executeLambda correctly, when retrying and the session is recreated", async () => {
+            const mockSession1: QldbSession = <QldbSession><any> sandbox.mock(QldbSession);
+            const mockSession2: QldbSession = <QldbSession><any> sandbox.mock(QldbSession);
+            mockSession1.isAlive = () => false;
+            mockSession2.isAlive = () => true;
+            sandbox.stub(qldbDriver, <any>'createNewSession').resolves(mockSession2);
+            const lambda = async (transactionExecutor: TransactionExecutor) => {
+                return true;
+            };
+            const error = new InvalidSessionException({ message: "", $metadata: {}});
+            error.message = "Some error";
+
+            mockSession1.executeLambda = async () => {
+                throw new ExecuteError(error, true, true);
+            };
+
+            mockSession2.executeLambda = async function<Type>(txnLambda: (txn: TransactionExecutor) => Promise<Type>): Promise<Type> {
+                return;
+            };
+
+            qldbDriver["_sessionPool"] = [mockSession1];
+            const executeLambdaSpy1 = sandbox.spy(mockSession1, "executeLambda");
+            const executeLambdaSpy2 = sandbox.spy(mockSession2, "executeLambda");
+            await qldbDriver.executeLambda(lambda, defaultRetryConfig);
+
+            sinon.assert.calledOnce(executeLambdaSpy1);
+            sinon.assert.calledWith(executeLambdaSpy1, lambda);
+            sinon.assert.calledOnce(executeLambdaSpy2);
+            sinon.assert.calledWith(executeLambdaSpy2, lambda);
         });
 
         it("should throw Error, without retrying, when Transaction expires", async () => {
