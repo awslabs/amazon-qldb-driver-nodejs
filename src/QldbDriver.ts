@@ -11,22 +11,30 @@
  * and limitations under the License.
  */
 
-import {QLDBSession, QLDBSessionClient, QLDBSessionClientConfig,} from "@aws-sdk/client-qldb-session";
-import {globalAgent} from "http";
-import {dom} from "ion-js";
+import {
+    QLDBSession,
+    QLDBSessionClient,
+    QLDBSessionClientConfig,
+} from "@aws-sdk/client-qldb-session";
+import { globalAgent } from "http";
+import { dom } from "ion-js";
 import Semaphore from "semaphore-async-await";
 
-import {version} from "../package.json";
-import {Communicator} from "./Communicator";
-import {DriverClosedError, ExecuteError, SessionPoolEmptyError,} from "./errors/Errors";
-import {debug, info} from "./LogUtil";
-import {QldbSession} from "./QldbSession";
-import {Result} from "./Result";
-import {BackoffFunction} from "./retry/BackoffFunction";
-import {defaultRetryConfig} from "./retry/DefaultRetryConfig";
-import {RetryConfig} from "./retry/RetryConfig";
-import {TransactionExecutor} from "./TransactionExecutor";
-import {NodeHttpHandler, NodeHttpHandlerOptions} from "@aws-sdk/node-http-handler";
+import { version } from "../package.json";
+import { Communicator } from "./Communicator";
+import {
+    DriverClosedError,
+    ExecuteError,
+    SessionPoolEmptyError,
+} from "./errors/Errors";
+import { debug, info } from "./LogUtil";
+import { QldbSession } from "./QldbSession";
+import { Result } from "./Result";
+import { BackoffFunction } from "./retry/BackoffFunction";
+import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
+import { RetryConfig } from "./retry/RetryConfig";
+import { TransactionExecutor } from "./TransactionExecutor";
+import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.
