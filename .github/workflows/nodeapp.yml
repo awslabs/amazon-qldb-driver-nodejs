@@ -10,6 +10,9 @@ jobs:
   build:
 
     runs-on: ${{ matrix.os }}
+    permissions:
+        id-token: write
+        contents: read
 
     strategy:
       max-parallel: 3
