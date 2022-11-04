@@ -1,3 +1,10 @@
+# 3.0.1 (2022-11-04)
+This is a minor release to incorporate a recent PR by the community: [245](https://github.com/awslabs/amazon-qldb-driver-nodejs/pull/245)
+
+## :bug: Bug Fixes
+* When the driver session is not live and a new one needs to be created and returned to the callee, the session is null resulting on an error: Cannot read properties of null (reading 'executeLambda'). The problem is that session var is not getting the new session recently created and it fails by returning null. It should re-up a connection and replace the driver object with the new session to the database.
+
+
 # 3.0.0 (2022-09-26)
 All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) to learn how to migrate to the AWS SDK for JavaScript V3 from AWS SDK for JavaScript V2.  
 
