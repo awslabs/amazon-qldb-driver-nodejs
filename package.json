@@ -46,7 +46,7 @@
     "clean": "rm -rf node_modules",
     "reinstall": "npm ci",
     "build": "npm run lint && tsc",
-    "doc": "typedoc --out docs ./src --exclude **/*.test.ts",
+    "doc": "typedoc --out docs ./index.ts --exclude **/*.test.ts",
     "installAndPack": "npm install . && npm pack && rm $npm_package_name-$npm_package_version.tgz",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build",
