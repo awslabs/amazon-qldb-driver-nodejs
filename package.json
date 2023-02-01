@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@aws-sdk/client-qldb-session": "^3.195.0",
     "@types/node": "^18.11.5",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
@@ -15,7 +14,8 @@
     "node": ">=14.0.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-qldb": "^3.194.0",
+    "@aws-sdk/client-qldb": "^3.256.0",
+    "@aws-sdk/client-qldb-session": "^3.256.0",
     "@types/chai": "^4.3.1",
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^10.0.0",
@@ -39,6 +39,8 @@
     "typescript": "^4.8.4"
   },
   "peerDependencies": {
+    "@aws-sdk/client-qldb": "^3.256.0",
+    "@aws-sdk/client-qldb-session": "^3.256.0",
     "ion-js": "^4.3.0",
     "jsbi": "^3.1.1"
   },
