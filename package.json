@@ -41,6 +41,8 @@
   "peerDependencies": {
     "@aws-sdk/client-qldb": "^3.256.0",
     "@aws-sdk/client-qldb-session": "^3.256.0",
+    "@aws-sdk/node-http-handler": "^3.256.0",
+    "@aws-sdk/smithy-client": "3.295.0",
     "ion-js": "^4.3.0",
     "jsbi": "^3.1.1"
   },
