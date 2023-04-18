@@ -35,7 +35,7 @@
     "nyc": "^15.1.0",
     "sinon": "^14.0.0",
     "ts-node": "^10.8.2",
-    "typedoc": "^0.23.18",
+    "typedoc": "^0.24.4",
     "typescript": "^4.8.4"
   },
   "peerDependencies": {
