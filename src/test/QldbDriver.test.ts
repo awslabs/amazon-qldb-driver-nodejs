@@ -34,7 +34,7 @@ import {
     QLDBSessionClientConfig,
     SendCommandResult
 } from "@aws-sdk/client-qldb-session";
-import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { NodeHttpHandler, NodeHttpHandlerOptions } from "@smithy/node-http-handler";
 import { globalAgent } from "http";
 
 chai.use(chaiAsPromised);
