@@ -24,7 +24,7 @@ import {
 import { warn } from "./LogUtil";
 import { Transaction } from "./Transaction";
 import { TransactionExecutor } from "./TransactionExecutor";
-import { ServiceException } from "@aws-sdk/smithy-client"
+import { ServiceException } from "@smithy/smithy-client"
 
 /**
  * @internal

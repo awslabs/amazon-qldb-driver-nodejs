@@ -23,7 +23,7 @@ import {
     QLDBSessionServiceException, 
 } from "@aws-sdk/client-qldb-session";
 
-import { ServiceException } from "@aws-sdk/smithy-client"
+import { ServiceException } from "@smithy/smithy-client"
 
 import { error } from "../LogUtil";
 
