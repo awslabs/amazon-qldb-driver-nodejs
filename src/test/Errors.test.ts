@@ -35,7 +35,7 @@ import {
 import * as LogUtil from "../LogUtil";
 import { BadRequestException, InvalidSessionException, OccConflictException } from "@aws-sdk/client-qldb-session";
 import { InvalidParameterException, ResourceNotFoundException, ResourcePreconditionNotMetException } from "@aws-sdk/client-qldb";
-import { ServiceException } from "@aws-sdk/smithy-client";
+import { ServiceException } from "@smithy/smithy-client";
 
 chai.use(chaiAsPromised);
 const sandbox = sinon.createSandbox();
