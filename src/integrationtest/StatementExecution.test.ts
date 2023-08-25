@@ -25,7 +25,7 @@ import { TimingInformation } from "../stats/TimingInformation";
 import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
-import { ServiceException } from "@aws-sdk/smithy-client"
+import { ServiceException } from "@smithy/smithy-client"
 
 const itParam = require("mocha-param");
 chai.use(chaiAsPromised);
