@@ -34,7 +34,7 @@ import { BackoffFunction } from "./retry/BackoffFunction";
 import { defaultRetryConfig } from "./retry/DefaultRetryConfig";
 import { RetryConfig } from "./retry/RetryConfig";
 import { TransactionExecutor } from "./TransactionExecutor";
-import { NodeHttpHandler, NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
+import { NodeHttpHandler, NodeHttpHandlerOptions } from "@smithy/node-http-handler";
 
 /**
   * This is the entry point for all interactions with Amazon QLDB.

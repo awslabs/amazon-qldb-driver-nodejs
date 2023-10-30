@@ -24,8 +24,8 @@ import { TransactionExecutor } from "../TransactionExecutor";
 import * as constants from "./TestConstants";
 import { TestUtils } from "./TestUtils";
 import { QLDBSessionClientConfig } from "@aws-sdk/client-qldb-session";
-import { NodeHttpHandlerOptions } from "@aws-sdk/node-http-handler";
-import { ServiceException } from "@aws-sdk/smithy-client"
+import { NodeHttpHandlerOptions } from "@smithy/node-http-handler";
+import { ServiceException } from "@smithy/smithy-client"
 
 chai.use(chaiAsPromised);
 
