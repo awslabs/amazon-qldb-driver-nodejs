@@ -28,7 +28,7 @@
     "eslint": "^8.26.0",
     "eslint-plugin-jsdoc": "^39.3.24",
     "grunt": "^1.5.3",
-    "ion-js": "^5.2.0",
+    "ion-js": "^4.3.0",
     "jsbi": "^3.1.1",
     "mocha": "^10.0.0",
     "mocha-param": "^2.0.1",
@@ -41,7 +41,7 @@
   "peerDependencies": {
     "@aws-sdk/client-qldb": "^3.256.0",
     "@aws-sdk/client-qldb-session": "^3.256.0",
-    "ion-js": "^5.2.0",
+    "ion-js": "^4.3.0",
     "jsbi": "^3.1.1"
   },
   "scripts": {
