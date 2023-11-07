@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@types/node": "^18.11.5",
+    "@types/node": "^20.8.10",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
