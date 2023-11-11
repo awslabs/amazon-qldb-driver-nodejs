@@ -1,6 +1,6 @@
 # Amazon QLDB Node.js Driver
 
-[![NPM Version](https://img.shields.io/badge/npm-v3.0.1-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)
+[![NPM Version](https://img.shields.io/badge/npm-v3.1.0-green)](https://www.npmjs.com/package/amazon-qldb-driver-nodejs)
 [![Documentation](https://img.shields.io/badge/docs-api-green.svg)](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html)
 [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/awslabs/amazon-qldb-driver-nodejs/blob/master/LICENSE)
 [![AWS Provider](https://img.shields.io/badge/provider-AWS-orange?logo=amazon-aws&color=ff9900)](https://aws.amazon.com/qldb/)
@@ -65,7 +65,7 @@ qldbDriver.getTableNames().then(function(tableNames: string[]) {
 ### See Also
 
 1. [Getting Started with Amazon QLDB Node.js Driver](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.html): A guide that gets you started with executing transactions with the QLDB Node.js driver.
-1. [QLDB Node.js Driver Cookbook](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-cookbook-nodejs.html) The cookbook provides code samples for some simple QLDB Node.js driver use cases. 
+1. [QLDB Node.js Driver Cookbook](https://docs.aws.amazon.com/qldb/latest/developerguide/driver-cookbook-nodejs.html) The cookbook provides code samples for some simple QLDB Node.js driver use cases.
 1. [Amazon QLDB Node.js Driver Tutorial](https://docs.aws.amazon.com/qldb/latest/developerguide/getting-started.nodejs.tutorial.html): In this tutorial, you use the QLDB Driver for Node.js to create an Amazon QLDB ledger and populate it with tables and sample data.
 1. [Amazon QLDB Node.js Driver Samples](https://github.com/aws-samples/amazon-qldb-dmv-sample-nodejs): A DMV based example application which demonstrates how to use QLDB with the QLDB Driver for Node.js.
 1. QLDB Node.js driver accepts and returns [Amazon ION](http://amzn.github.io/ion-docs/) Documents. Amazon Ion is a richly-typed, self-describing, hierarchical data serialization format offering interchangeable binary and text representations. For more information read the [ION docs](http://amzn.github.io/ion-docs/docs.html).
@@ -108,7 +108,7 @@ This command requires that credentials are pre-configured and it has the require
 
 Additionally, a region can be specified in: `src/integrationtest/.mocharc.json`.
 
-### Documentation 
+### Documentation
 
 TypeDoc is used for documentation. You can generate HTML locally with the following:
 

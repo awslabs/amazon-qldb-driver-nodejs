@@ -1,3 +1,6 @@
+# 3.1.0 (2023-11-10)
+No new features are introduced but [570](https://github.com/awslabs/amazon-qldb-driver-nodejs/pull/570) updates the peer dependency requirement `ion-js` from `^4.3.0` to `^5.2.0`.
+
 # 3.0.1 (2022-11-04)
 This is a minor release to incorporate a recent PR by the community: [245](https://github.com/awslabs/amazon-qldb-driver-nodejs/pull/245)
 
@@ -6,7 +9,7 @@ This is a minor release to incorporate a recent PR by the community: [245](https
 
 
 # 3.0.0 (2022-09-26)
-All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) to learn how to migrate to the AWS SDK for JavaScript V3 from AWS SDK for JavaScript V2.  
+All the changes are introduced by SDK V3, please check [Migrating to the AWS SDK for JavaScript V3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/migrating-to-v3.html) to learn how to migrate to the AWS SDK for JavaScript V3 from AWS SDK for JavaScript V2.
 
 ## :tada: Enhancements
 * Migrated to [AWS SDK for JavasScript V3](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html).
@@ -62,8 +65,8 @@ const qldbDriver: QldbDriver = new QldbDriver("testLedger", serviceConfiguration
 * Updated driver to comply with new [service exception class](https://aws.amazon.com/blogs/developer/service-error-handling-modular-aws-sdk-js/).
 
 # 2.2.0
-This release is focused on improving the retry logic, optimizing it and handling more possible failures, as well as more 
-strictly defining the API to help prevent misuse. These changes are potentially breaking if the driver is being used in 
+This release is focused on improving the retry logic, optimizing it and handling more possible failures, as well as more
+strictly defining the API to help prevent misuse. These changes are potentially breaking if the driver is being used in
 a way that isn't supported by the documentation.
 
 ## :tada: Enhancements
@@ -75,7 +78,7 @@ a way that isn't supported by the documentation.
  * Updated the exponential backoff algorithm to better align with the algorithm specified [here](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/).
  * Specify minimum Node.js version to 10.0 in [package.json](https://github.com/awslabs/amazon-qldb-driver-nodejs/blob/master/package.json#L13).
 
-## :warning: API Clean-up 
+## :warning: API Clean-up
 
 These changes either remove unintentionally exported modules or remove the use of `any`. Updating to 2.2.0 should not break any documented usage of the driver and should not require code changes. If something is now incompatible and it's believed that it should be, please open an issue.
 
@@ -83,7 +86,7 @@ These changes either remove unintentionally exported modules or remove the use o
 
   * ```typescript
     // Old
-    async ExecuteLambda(transactionLambda: (transactionExecutor: TransactionExecutor) => any, 
+    async ExecuteLambda(transactionLambda: (transactionExecutor: TransactionExecutor) => any,
         retryConfig?: RetryConfig): Promise<any>;
     // New
     async ExecuteLambda<Type>(transactionLambda: (transactionExecutor: TransactionExecutor) => Promise<Type>,
