@@ -1,6 +1,8 @@
 {
   "dependencies": {
-    "@types/node": "^18.11.5",
+    "@smithy/node-http-handler": "^2.5.0",
+    "@smithy/smithy-client": "^2.5.0",
+    "@types/node": "^20.11.24",
     "ion-hash-js": "^2.0.0",
     "semaphore-async-await": "^1.5.1"
   },
