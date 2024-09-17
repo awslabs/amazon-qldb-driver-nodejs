@@ -28,7 +28,7 @@
     "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
     "eslint": "^8.26.0",
-    "eslint-plugin-jsdoc": "^39.3.24",
+    "eslint-plugin-jsdoc": "^50.2.3",
     "grunt": "^1.5.3",
     "ion-js": "^5.2.0",
     "jsbi": "^3.1.1",
